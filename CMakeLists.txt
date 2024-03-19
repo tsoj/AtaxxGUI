@@ -45,8 +45,6 @@ find_package(Boost REQUIRED)
 find_package(Threads REQUIRED)
 find_package(Qt6 REQUIRED COMPONENTS Widgets)
 
-set_property(GLOBAL PROPERTY USE_FOLDERS ON) # TODO is this necessary
-
 if(NOT (Boost_FOUND AND Threads_FOUND AND Qt6Core_FOUND))
     message(FATAL_ERROR "Can't build AtaxxGUI: Boost, Threads, and Qt6 required")
 endif()

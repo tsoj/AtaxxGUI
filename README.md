@@ -5,7 +5,7 @@ A graphical user interface for playing Ataxx between engines and humans
 ## Compile
 
 ```bash
-git clone TODO
+git clone https://github.com/tsoj/AtaxxGUI.git
 cd AtaxxGUI
 mkdir build
 cd build
