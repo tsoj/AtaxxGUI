@@ -9,6 +9,8 @@ git clone https://github.com/tsoj/AtaxxGUI.git
 cd AtaxxGUI
 mkdir build
 cd build
+export CC=gcc
+export CXX=g++
 cmake .. && make -j
 ```
 
