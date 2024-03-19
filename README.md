@@ -1,8 +1,13 @@
-# AtaxxGUI
-
-A graphical user interface for playing Ataxx between engines and humans
+<div align="center">
+<p><h1>AtaxxGUI</h1>
+<i><h4>A graphical user interface for playing Ataxx between engines and humans</h4></i>
+<img src="./screenshot.png" height="384px">
+</h1>
+</div>
 
 ## Compile
+
+You need to install Boost and Qt6
 
 ```bash
 git clone https://github.com/tsoj/AtaxxGUI.git
