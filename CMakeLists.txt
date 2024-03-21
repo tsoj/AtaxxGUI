@@ -13,7 +13,7 @@ include(FetchContent)
 FetchContent_Declare(
     libataxx
     GIT_REPOSITORY https://github.com/tsoj/libataxx
-    GIT_TAG c137d7078d22b893980cac3744ef2e793176ce4b
+    GIT_TAG 19046ba6aed31ddce45d26fe0bcabfd72fad5c92
 )
 
 FetchContent_Declare(
