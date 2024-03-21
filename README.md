@@ -23,7 +23,7 @@ cmake .. && make -j
 
 ### Windows
 
-```powershell
+```bash
 git clone https://github.com/tsoj/AtaxxGUI.git
 cd AtaxxGUI
 mkdir build
@@ -31,6 +31,8 @@ cd build
 cmake ..
 msbuild .\AtaxxGUI.sln /p:Configuration=Release
 ```
+
+There are also windows binaries available under releases.
 
 ## Credits
 
