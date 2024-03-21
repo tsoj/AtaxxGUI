@@ -27,7 +27,7 @@ cmake .. && make -j
 
 ### Windows
 
-There are binaries for Windows available under [releases](/releases/latest).
+There are binaries for Windows available under releases.
 
 ```bash
 git clone https://github.com/tsoj/AtaxxGUI.git
