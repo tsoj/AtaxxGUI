@@ -29,7 +29,7 @@ cd AtaxxGUI
 mkdir build
 cd build
 cmake ..
-msbuild .\AtaxxGUI.sln /p:Configuration=Debug
+msbuild .\AtaxxGUI.sln /p:Configuration=Release
 ```
 
 ## Credits
