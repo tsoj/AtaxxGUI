@@ -32,6 +32,7 @@
 #include "guisettings.hpp"
 #include "humanengine.hpp"
 #include "texteditor.hpp"
+#include <algorithm>
 
 // #include "boardview/boardscene.hpp"
 
@@ -122,7 +123,7 @@ void MainWindow::load_settings() {
     }
 
     std::cout << "Using settings file: " << m_settings_file_path << std::endl;
-    const auto settings = GuiSettings(m_settings_file_path);
+    const auto settings = GuiSettings(m_settings_file_path.string());
     m_engines.clear();
     for (const auto &engine : settings.engines) {
         m_engines[engine.name] = engine;
@@ -347,7 +348,7 @@ MainWindow::MainWindow(QWidget *parent)
 }
 
 void MainWindow::edit_settings() {
-    TextEditor *editor = new TextEditor(m_settings_file_path);
+    TextEditor *editor = new TextEditor(m_settings_file_path.string());
     connect(editor, &TextEditor::changed_settings, this, &MainWindow::load_settings);
     editor->setAttribute(Qt::WA_DeleteOnClose);
     editor->resize(size());

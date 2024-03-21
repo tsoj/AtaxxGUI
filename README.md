@@ -7,7 +7,9 @@
 
 ## Compile
 
-You need to install Boost and Qt6
+You need to install Boost, Qt6, git, CMake, and a C++ compiler
+
+### Linux
 
 ```bash
 git clone https://github.com/tsoj/AtaxxGUI.git
@@ -17,6 +19,17 @@ cd build
 export CC=gcc
 export CXX=g++
 cmake .. && make -j
+```
+
+### Windows
+
+```powershell
+git clone https://github.com/tsoj/AtaxxGUI.git
+cd AtaxxGUI
+mkdir build
+cd build
+cmake ..
+msbuild .\AtaxxGUI.sln /p:Configuration=Debug
 ```
 
 ## Credits

@@ -12,14 +12,14 @@ include(FetchContent)
 
 FetchContent_Declare(
     libataxx
-    GIT_REPOSITORY https://github.com/kz04px/libataxx
-    GIT_TAG 2fe5d1517c9e66fefb78cef7b3c35e5f9f1bb9ee
+    GIT_REPOSITORY https://github.com/tsoj/libataxx
+    GIT_TAG c137d7078d22b893980cac3744ef2e793176ce4b
 )
 
 FetchContent_Declare(
     cuteataxx
     GIT_REPOSITORY https://github.com/tsoj/cuteataxx
-    GIT_TAG master
+    GIT_TAG ea25df13c30ffb0706fda6e505893ba4ffeaac47
 )
 
 FetchContent_Declare(
@@ -41,7 +41,12 @@ if(NOT cuteataxx_POPULATED)
 endif()
 
 
-find_package(Boost REQUIRED)
+if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    find_package(Boost REQUIRED)
+else()
+    set(Boost_USE_STATIC_LIBS ON)
+    find_package(Boost REQUIRED COMPONENTS filesystem)
+endif()
 find_package(Threads REQUIRED)
 find_package(Qt6 REQUIRED COMPONENTS Widgets)
 
@@ -51,18 +56,20 @@ endif()
 
 include_directories(${cuteataxx_SOURCE_DIR}/src/core/)
 include_directories(${cuteataxx_SOURCE_DIR}/libs/)
+include_directories(${Boost_INCLUDE_DIRS})
 
 if(NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE Release)
+    set(CMAKE_BUILD_TYPE Debug)
 endif()
 
 # Flags
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_CXX_FLAGS "-Wall -Wextra -Wshadow -pedantic -Wnon-virtual-dtor -Wold-style-cast -Wcast-align -Wunused -Woverloaded-virtual -Wpedantic -Wmisleading-indentation -Wduplicated-cond -Wduplicated-branches -Wlogical-op -Wnull-dereference -Wuseless-cast -Wdouble-promotion -Wformat=2")
-set(CMAKE_CXX_FLAGS_DEBUG "-g -fsanitize=address")
-set(CMAKE_CXX_FLAGS_RELEASE "-O2 -g")
+
+if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    set(CMAKE_CXX_FLAGS "-O2 -g -Wall -Wextra -Wshadow -pedantic -Wnon-virtual-dtor -Wold-style-cast -Wcast-align -Wunused -Woverloaded-virtual -Wpedantic -Wmisleading-indentation -Wduplicated-cond -Wduplicated-branches -Wlogical-op -Wnull-dereference -Wuseless-cast -Wdouble-promotion -Wformat=2 -fexceptions")
+endif()
 
 
 file(COPY ${CMAKE_SOURCE_DIR}/res/piece_images DESTINATION ${CMAKE_BINARY_DIR})
@@ -103,4 +110,5 @@ target_link_libraries(
     Qt6::Widgets
     ataxx_static
     nlohmann_json::nlohmann_json
+    ${Boost_LIBRARIES}
 )
