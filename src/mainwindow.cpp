@@ -476,7 +476,7 @@ void MainWindow::start_game() {
             }
 
             if (tc1.type == SearchSettings::Type::Time) {
-                m_clock_black->set_time(QTime(0, 0).addMSecs(tc1.wtime));
+                m_clock_black->set_time(QTime(0, 0).addMSecs(tc1.btime));
             } else {
                 m_clock_black->set_time(QTime(23, 59, 59));
             }
