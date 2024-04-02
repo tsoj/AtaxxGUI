@@ -19,10 +19,12 @@ void GameWorker::start_game() {
             }
             emit new_move(info);
             emit update_time_control(tc1, tc2, info.endpos.get_turn());
+            std::this_thread::sleep_for(std::chrono::milliseconds(300));
             return true;
         });
     emit finished_game(result);
 }
+
 void GameWorker::stopGame() {
     m_stop_flag = true;
     for (auto engine : std::vector{m_engine1, m_engine2}) {

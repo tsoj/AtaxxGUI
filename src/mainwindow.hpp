@@ -14,11 +14,11 @@
 #include <QThread>
 #include <QTimeEdit>
 #include <map>
-#include "humanengine.hpp"
 #include "boardview/boardscene.hpp"
 #include "boardview/boardview.hpp"
 #include "countdowntimer.hpp"
 #include "gameworker.hpp"
+#include "humanengine.hpp"
 
 class MainWindow : public QMainWindow {
     Q_OBJECT

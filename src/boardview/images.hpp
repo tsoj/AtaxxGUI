@@ -35,7 +35,8 @@ class PieceImages {
             std::filesystem::create_directories(dst_path);
 
             for (auto f : std::vector{"x.png", "o.png", "-.png"}) {
-                std::filesystem::copy_file(src_path / f, dst_path / f, std::filesystem::copy_options::overwrite_existing);
+                std::filesystem::copy_file(
+                    src_path / f, dst_path / f, std::filesystem::copy_options::overwrite_existing);
             }
         }
 
