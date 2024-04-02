@@ -84,7 +84,7 @@ const std::string default_settings_string =
     "{"
     "    \"timecontrol\": {"
     "        \"time\": 15000,"
-    "        \"inc\": 100"
+    "        \"inc\": 1000"
     "    },"
     "    \"options\": {"
     "        \"debug\": \"false\","
