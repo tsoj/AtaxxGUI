@@ -61,6 +61,14 @@ auto get_recv_send_callbacks(const std::string &engine_name) {
                      }};
 }
 
+std::string getSettingsFilePath() {
+    std::string altSettingPath = QDir::homePath().toStdString() + "/.AtaxxGUI/settings.json";
+    if (std::filesystem::exists(altSettingPath)) {
+        return altSettingPath;
+    }
+    return QCoreApplication::applicationDirPath().toStdString() + "/settings.json";
+}
+
 const std::vector<std::string> start_positions = {"x5o/7/2-1-2/7/2-1-2/7/o5x x 0 1",
                                                   "x5o/7/7/7/7/7/o5x x 0 1",
                                                   "x5o/1-3-1/2-1-2/7/2-1-2/1-3-1/o5x x 0 1",
@@ -162,9 +170,7 @@ void MainWindow::load_settings() {
     m_inc_spin_box->setTime(QTime(0, 0, 0).addMSecs(std::max(settings.tc.winc, settings.tc.binc)));
 }
 
-MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent),
-      m_settings_file_path(QCoreApplication::applicationDirPath().toStdString() + "/settings.json") {
+MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), m_settings_file_path(getSettingsFilePath()) {
     QGridLayout *tc_layout = new QGridLayout();
     QLabel *time_label = new QLabel("Time (HH:mm:ss): ", this);
     QLabel *inc_label = new QLabel("Increment (mm:ss): ", this);
