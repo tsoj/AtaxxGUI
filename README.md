@@ -36,6 +36,8 @@ mkdir build
 cd build
 cmake ..
 msbuild .\AtaxxGUI.sln /p:Configuration=Release
+# If you want to distribute:
+windeployqt.exe .\AtaxxGUI.exe
 ```
 
 

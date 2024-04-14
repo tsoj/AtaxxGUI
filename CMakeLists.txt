@@ -112,3 +112,5 @@ target_link_libraries(
     nlohmann_json::nlohmann_json
     ${Boost_LIBRARIES}
 )
+
+set_target_properties(AtaxxGUI PROPERTIES ARCHIVE_OUTPUT_DIRECTORY $<0:>)
