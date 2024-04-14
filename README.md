@@ -1,7 +1,7 @@
 <div align="center">
 <p><h1>AtaxxGUI</h1>
 <i><h4>A graphical user interface for playing Ataxx between engines and humans</h4></i>
-<img src="./screenshot.png" height="384px">
+<img src="./screenshot.png" width="640px">
 </h1>
 </div>
 
