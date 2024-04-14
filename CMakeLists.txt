@@ -63,17 +63,12 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 # Flags
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_STANDARD 20)
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     set(CMAKE_CXX_FLAGS "-O2 -g -Wall -Wextra -Wshadow -pedantic -Wnon-virtual-dtor -Wold-style-cast -Wcast-align -Wunused -Woverloaded-virtual -Wpedantic -Wmisleading-indentation -Wduplicated-cond -Wduplicated-branches -Wlogical-op -Wnull-dereference -Wuseless-cast -Wdouble-promotion -Wformat=2 -fexceptions")
 endif()
-
-
-file(COPY ${CMAKE_SOURCE_DIR}/res/piece_images DESTINATION ${CMAKE_BINARY_DIR})
-file(COPY ${CMAKE_SOURCE_DIR}/res/board_images DESTINATION ${CMAKE_BINARY_DIR})
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -113,4 +108,10 @@ target_link_libraries(
     ${Boost_LIBRARIES}
 )
 
-set_target_properties(AtaxxGUI PROPERTIES ARCHIVE_OUTPUT_DIRECTORY $<0:>)
+set(BIN_DIR "${CMAKE_SOURCE_DIR}/bin")
+
+set_target_properties(AtaxxGUI PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${BIN_DIR})
+set_target_properties(AtaxxGUI PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${BIN_DIR})
+
+file(COPY ${CMAKE_SOURCE_DIR}/res/piece_images DESTINATION ${BIN_DIR})
+file(COPY ${CMAKE_SOURCE_DIR}/res/board_images DESTINATION ${BIN_DIR})
