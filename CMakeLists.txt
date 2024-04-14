@@ -110,8 +110,8 @@ target_link_libraries(
 
 set(BIN_DIR "${CMAKE_SOURCE_DIR}/bin")
 
-set_target_properties(AtaxxGUI PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${BIN_DIR})
-set_target_properties(AtaxxGUI PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${BIN_DIR})
+set_target_properties(AtaxxGUI PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${BIN_DIR}/$<0:>)
+set_target_properties(AtaxxGUI PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${BIN_DIR}/$<0:>)
 
 file(COPY ${CMAKE_SOURCE_DIR}/res/piece_images DESTINATION ${BIN_DIR})
 file(COPY ${CMAKE_SOURCE_DIR}/res/board_images DESTINATION ${BIN_DIR})
