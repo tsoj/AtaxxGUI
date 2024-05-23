@@ -3,6 +3,7 @@
 #include <qcombobox.h>
 #include <qlabel.h>
 #include <qmessagebox.h>
+#include <qnamespace.h>
 #include <qpushbutton.h>
 #include <../core/engine/create.hpp>
 #include <../core/match/callbacks.hpp>
@@ -89,10 +90,10 @@ MainWindow::MainWindow(const std::string &settingsFileName, QWidget *parent) : Q
     m_board_theme_selection = new QComboBox(this);
     m_material_balance_slider = new MaterialSlider(this);
 
-    PieceImages::load();
+    auto *engine_name_black = new QLabel(this);
+    auto *engine_name_white = new QLabel(this);
 
-    const auto settings = parse::settings(settingsFileName);
-    const auto openings = parse::openings(settings.openings_path, settings.shuffle);
+    PieceImages::load();
 
     // Create central widget
     setCentralWidget(central_widget);
@@ -144,8 +145,10 @@ MainWindow::MainWindow(const std::string &settingsFileName, QWidget *parent) : Q
 
     clock_layout->addWidget(m_turn_radio_white);
     clock_layout->addWidget(m_clock_piece_white);
+    clock_layout->addWidget(engine_name_white);
     clock_layout->addWidget(m_clock_white);
     clock_layout->addWidget(m_clock_black);
+    clock_layout->addWidget(engine_name_black);
     clock_layout->addWidget(m_clock_piece_black);
     clock_layout->addWidget(m_turn_radio_black);
     middle_layout->addLayout(clock_layout);
@@ -182,6 +185,48 @@ MainWindow::MainWindow(const std::string &settingsFileName, QWidget *parent) : Q
     main_layout->setStretch(2, 1);
 
     m_board_scene->set_board(libataxx::Position("x5o/7/2-1-2/7/2-1-2/7/o5x x 0 1"));
+
+    engine_name_white->setText("hehelai");
+    engine_name_white->setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
+    engine_name_black->setText("ao8sjdoiasjdoi");
+    engine_name_black->setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
+
+    const auto settings = parse::settings(settingsFileName);
+    const auto openings = parse::openings(settings.openings_path, settings.shuffle);
+
+    /*const auto callbacks = Callbacks{
+        .on_engine_start =
+            [](const std::string &) {
+            },
+        .on_game_started =
+            [&settings, &game_tab, &screen](
+                const int, const std::string &fen, const std::string &name1, const std::string &name2) {
+                game_tab.new_game();
+                game_tab.set_title(name1 + " vs " + name2);
+                game_tab.set_position(fen);
+                game_tab.set_clock(settings.tc);
+                screen.PostEvent(Event::Custom);
+            },
+        .on_game_finished =
+            [&settings](const int, const std::string &, const std::string &) {
+                std::this_thread::sleep_for(std::chrono::seconds(3));
+            },
+        .on_results_update =
+            [&settings, &game_tab](const Results &results) {
+                game_tab.update_results(results);
+            },
+        .on_info_send =
+            [](const std::string &) {
+            },
+        .on_info_recv =
+            [](const std::string &) {
+            },
+        .on_move =
+            [&game_tab, &screen](const libataxx::Move &move, const int ms) {
+                game_tab.makemove(move, ms);
+                screen.PostEvent(Event::Custom);
+            },
+    };*/
 }
 /*
 void MainWindow::start_game() {
