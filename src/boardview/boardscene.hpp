@@ -59,7 +59,7 @@ class BoardScene : public QGraphicsScene {
     virtual ~BoardScene();
 
     /*! Returns the current internal board object. */
-    libataxx::Position board() const;
+    [[nodiscard]] libataxx::Position board() const;
 
     void make_move(const libataxx::Move& move, std::optional<libataxx::Square> source);
 
@@ -81,7 +81,7 @@ class BoardScene : public QGraphicsScene {
      * Cancels any ongoing user move and flashes \a result
      * over the board.
      */
-    void on_game_finished(GameThingy result);
+    void on_game_finished(libataxx::Result result);
 
    signals:
     /*!

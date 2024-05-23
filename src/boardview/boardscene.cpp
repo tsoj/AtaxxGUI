@@ -223,13 +223,13 @@ void BoardScene::mouseReleaseEvent(QGraphicsSceneMouseEvent* event) {
     }
 }
 
-void BoardScene::on_game_finished(GameThingy result) {
+void BoardScene::on_game_finished(libataxx::Result result) {
     delete m_move_arrows;
     m_move_arrows = nullptr;
     clear_selection();
 
     const QString result_string = [result]() {
-        switch (result.result) {
+        switch (result) {
             case libataxx::Result::BlackWin:
                 return "1-0";
             case libataxx::Result::WhiteWin:

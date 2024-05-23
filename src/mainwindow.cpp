@@ -15,6 +15,7 @@
 #include <QDir>
 #include <QGridLayout>
 #include <QHBoxLayout>
+#include <QHeaderView>
 #include <QLabel>
 #include <QMainWindow>
 #include <QMessageBox>
@@ -24,6 +25,7 @@
 #include <QTextEdit>
 #include <QVBoxLayout>
 #include <algorithm>
+#include <cassert>
 #include <exception>
 #include <filesystem>
 #include <fstream>
@@ -34,12 +36,6 @@
 #include "boardview/boardscene.hpp"
 #include "boardview/boardview.hpp"
 #include "boardview/images.hpp"
-// #include "engine/settings.hpp"
-// #include "guisettings.hpp"
-// #include "humanengine.hpp"
-// #include "texteditor.hpp"
-
-// #include "boardview/boardscene.hpp"
 
 namespace {
 
@@ -65,33 +61,86 @@ auto get_recv_send_callbacks(const std::string &engine_name) {
                          write_line(msg, "<-- ");
                      }};
 }
+
+void fill_table(QTableWidget *results_table, const Results &results) {
+    results_table->clear();
+    results_table->setColumnCount(6);
+
+    // Set the column headers
+    QStringList headers = {"Score", "Engine", "Wins", "Losses", "Draws", "Crashes"};
+    results_table->setHorizontalHeaderLabels(headers);
+
+    // Set the column data types by setting appropriate item flags and validators if necessary
+    // For simplicity, this example does not include validators, but you can add them as needed
+
+    // Adjust the header to fit the content
+    results_table->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+
+    for (const auto &[engine, score] : results.scores) {
+        results_table->insertRow(results_table->rowCount());
+        const int row = results_table->rowCount() - 1;
+
+        // Score (int)
+        const int scoreScore = (100 * (score.draws + 2 * score.wins)) / (2 * score.played);
+        auto *rankItem =
+            new QTableWidgetItem((std::to_string(scoreScore) + " %").c_str());  // Replace with the actual engine name
+        results_table->setItem(row, 0, rankItem);
+
+        // Engine (string)
+        auto *engineItem = new QTableWidgetItem(engine.c_str());  // Replace with the actual engine name
+        results_table->setItem(row, 1, engineItem);
+
+        // Wins (int)
+        auto *winsItem = new QTableWidgetItem();
+        winsItem->setData(Qt::EditRole, QVariant(score.wins));  // Replace 10 with the actual wins count
+        results_table->setItem(row, 2, winsItem);
+
+        // Losses (int)
+        auto *lossesItem = new QTableWidgetItem();
+        lossesItem->setData(Qt::EditRole, QVariant(score.losses));  // Replace 2 with the actual losses count
+        results_table->setItem(row, 3, lossesItem);
+
+        // Draws (int)
+        auto *drawsItem = new QTableWidgetItem();
+        drawsItem->setData(Qt::EditRole, QVariant(score.draws));  // Replace 5 with the actual draws count
+        results_table->setItem(row, 4, drawsItem);
+
+        // Crashes (int)
+        auto *crashesItem = new QTableWidgetItem();
+        crashesItem->setData(Qt::EditRole, QVariant(score.crashes));  // Replace 5 with the actual draws count
+        results_table->setItem(row, 5, crashesItem);
+    }
+}
+
 }  // namespace
 
 MainWindow::MainWindow(const std::string &settingsFileName, QWidget *parent) : QMainWindow(parent) {
     m_board_scene = new BoardScene(this);
     m_board_view = new BoardView(m_board_scene, this);
-    QWidget *central_widget = new QWidget(this);
-    QHBoxLayout *main_layout = new QHBoxLayout(central_widget);
-    QVBoxLayout *left_layout = new QVBoxLayout();
+    auto *central_widget = new QWidget(this);
+    auto *main_layout = new QHBoxLayout(central_widget);
+    auto *left_layout = new QVBoxLayout();
     m_clock_piece_white = new QLabel(this);
     m_clock_piece_black = new QLabel(this);
-    QVBoxLayout *middle_layout = new QVBoxLayout();
-    QHBoxLayout *clock_layout = new QHBoxLayout();
+    auto *middle_layout = new QVBoxLayout();
+    auto *clock_layout = new QHBoxLayout();
     m_material_balance_piece_white = new QLabel(this);
     m_material_balance_piece_black = new QLabel(this);
     m_turn_radio_white = new QRadioButton;
     m_turn_radio_black = new QRadioButton;
     m_clock_white = new CountdownTimer(this);
     m_clock_black = new CountdownTimer(this);
-    QHBoxLayout *material_balance_layout = new QHBoxLayout();
-    QVBoxLayout *right_layout = new QVBoxLayout();
+    auto *material_balance_layout = new QHBoxLayout();
+    auto *right_layout = new QVBoxLayout();
     m_pgn_text_field = new QTextEdit(this);
     m_piece_theme_selection = new QComboBox(this);
     m_board_theme_selection = new QComboBox(this);
     m_material_balance_slider = new MaterialSlider(this);
 
-    auto *engine_name_black = new QLabel(this);
-    auto *engine_name_white = new QLabel(this);
+    m_engine_name_black = new QLabel(this);
+    m_engine_name_white = new QLabel(this);
+
+    m_results_table = new QTableWidget(this);
 
     PieceImages::load();
 
@@ -145,10 +194,10 @@ MainWindow::MainWindow(const std::string &settingsFileName, QWidget *parent) : Q
 
     clock_layout->addWidget(m_turn_radio_white);
     clock_layout->addWidget(m_clock_piece_white);
-    clock_layout->addWidget(engine_name_white);
+    clock_layout->addWidget(m_engine_name_white);
     clock_layout->addWidget(m_clock_white);
     clock_layout->addWidget(m_clock_black);
-    clock_layout->addWidget(engine_name_black);
+    clock_layout->addWidget(m_engine_name_black);
     clock_layout->addWidget(m_clock_piece_black);
     clock_layout->addWidget(m_turn_radio_black);
     middle_layout->addLayout(clock_layout);
@@ -186,34 +235,46 @@ MainWindow::MainWindow(const std::string &settingsFileName, QWidget *parent) : Q
 
     m_board_scene->set_board(libataxx::Position("x5o/7/2-1-2/7/2-1-2/7/o5x x 0 1"));
 
-    engine_name_white->setText("hehelai");
-    engine_name_white->setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
-    engine_name_black->setText("ao8sjdoiasjdoi");
-    engine_name_black->setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
+    m_engine_name_white->setText("hehelai");
+    m_engine_name_white->setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
+    m_engine_name_black->setText("ao8sjdoiasjdoi");
+    m_engine_name_black->setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
 
-    const auto settings = parse::settings(settingsFileName);
-    const auto openings = parse::openings(settings.openings_path, settings.shuffle);
+    m_settings = parse::settings(settingsFileName);
+    m_openings = parse::openings(m_settings.openings_path, m_settings.shuffle);
 
-    /*const auto callbacks = Callbacks{
+    // for(const auto e : m_settings.engines)
+    // {
+    //     std::cout << "----------------" << std::endl;
+    //     std::cout << e.name << std::endl;
+    //     std::cout << e.path << std::endl;
+    //     std::cout << "----------------" << std::endl;
+    // }
+
+    // assert(false);
+
+    m_callbacks = Callbacks{
         .on_engine_start =
             [](const std::string &) {
             },
         .on_game_started =
-            [&settings, &game_tab, &screen](
-                const int, const std::string &fen, const std::string &name1, const std::string &name2) {
-                game_tab.new_game();
-                game_tab.set_title(name1 + " vs " + name2);
-                game_tab.set_position(fen);
-                game_tab.set_clock(settings.tc);
-                screen.PostEvent(Event::Custom);
+            [&](const int, const std::string &fen, const std::string &name1, const std::string &name2) {
+                std::cout << name1 << std::endl;
+                std::cout << name2 << std::endl;
+                m_engine_name_black->setText(name1.c_str());
+                m_engine_name_white->setText(name2.c_str());
+                m_board_scene->set_board(libataxx::Position(fen));
+                m_clock_white->set_time(QTime(0, 0).addMSecs(m_settings.tc.wtime));
+                m_clock_black->set_time(QTime(0, 0).addMSecs(m_settings.tc.btime));
             },
         .on_game_finished =
-            [&settings](const int, const std::string &, const std::string &) {
-                std::this_thread::sleep_for(std::chrono::seconds(3));
+            [&](const libataxx::Result result, const std::string &, const std::string &) {
+                m_board_scene->on_game_finished(result);
+                std::this_thread::sleep_for(std::chrono::seconds(10));
             },
         .on_results_update =
-            [&settings, &game_tab](const Results &results) {
-                game_tab.update_results(results);
+            [&](const Results &results) {
+                fill_table(m_results_table, results);
             },
         .on_info_send =
             [](const std::string &) {
@@ -222,11 +283,23 @@ MainWindow::MainWindow(const std::string &settingsFileName, QWidget *parent) : Q
             [](const std::string &) {
             },
         .on_move =
-            [&game_tab, &screen](const libataxx::Move &move, const int ms) {
-                game_tab.makemove(move, ms);
-                screen.PostEvent(Event::Custom);
+            [&](const libataxx::Move &move, const int ms) {
+                if (m_board_scene->board().get_turn() == libataxx::Side::Black) {
+                    m_clock_black->set_time(QTime(0, 0).addMSecs(ms));
+                } else {
+                    m_clock_white->set_time(QTime(0, 0).addMSecs(ms));
+                }
+
+                this->m_board_scene->on_new_move(move);
+                // TODO update move list
+                // screen.PostEvent(Event::Custom);
+                std::this_thread::sleep_for(std::chrono::seconds(1));
             },
-    };*/
+    };
+
+    m_thread = std::thread([&]() {
+        const auto results = run(m_settings, m_openings, m_callbacks);
+    });
 }
 /*
 void MainWindow::start_game() {
@@ -401,4 +474,7 @@ void MainWindow::stop_game() {
 */
 MainWindow::~MainWindow() {
     // stop_game();
+    if (m_thread.joinable()) {
+        m_thread.join();
+    }
 }

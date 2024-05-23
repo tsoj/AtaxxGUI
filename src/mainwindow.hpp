@@ -1,6 +1,7 @@
 
 #pragma once
 
+#include <../core/parse/settings.hpp>
 #include <QApplication>
 #include <QCheckBox>
 #include <QComboBox>
@@ -10,11 +11,13 @@
 #include <QMainWindow>
 #include <QPushButton>
 #include <QRadioButton>
+#include <QTableWidget>
 #include <QTextEdit>
 #include <QThread>
 #include <QTimeEdit>
 #include <map>
 #include <string_view>
+#include <thread>
 #include "boardview/boardscene.hpp"
 #include "boardview/boardview.hpp"
 #include "countdowntimer.hpp"
@@ -46,18 +49,18 @@ class MaterialSlider : public QSlider {
         this->setValue(0);      // Set an initial value if needed
     }
 
-       protected:
-        void mousePressEvent([[maybe_unused]] QMouseEvent* event) override {
-            // Do nothing to ignore mouse press events
-        }
+   protected:
+    void mousePressEvent([[maybe_unused]] QMouseEvent* event) override {
+        // Do nothing to ignore mouse press events
+    }
 
-        void mouseMoveEvent([[maybe_unused]] QMouseEvent* event) override {
-            // Do nothing to ignore mouse move events
-        }
+    void mouseMoveEvent([[maybe_unused]] QMouseEvent* event) override {
+        // Do nothing to ignore mouse move events
+    }
 
-        void mouseReleaseEvent([[maybe_unused]] QMouseEvent* event) override {
-            // Do nothing to ignore mouse release events
-        }
+    void mouseReleaseEvent([[maybe_unused]] QMouseEvent* event) override {
+        // Do nothing to ignore mouse release events
+    }
 };
 
 class MainWindow : public QMainWindow {
@@ -90,4 +93,14 @@ class MainWindow : public QMainWindow {
 
     std::filesystem::path m_settings_file_path;
     std::map<std::string, EngineSettings> m_engines;
+
+    std::thread m_thread;
+
+    Settings m_settings;
+    Callbacks m_callbacks;
+    std::vector<std::string> m_openings;
+
+    QLabel* m_engine_name_black{nullptr};
+    QLabel* m_engine_name_white{nullptr};
+    QTableWidget* m_results_table{nullptr};
 };
