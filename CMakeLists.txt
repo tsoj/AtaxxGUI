@@ -19,7 +19,7 @@ FetchContent_Declare(
 FetchContent_Declare(
     cuteataxx
     GIT_REPOSITORY https://github.com/tsoj/cuteataxx
-    GIT_TAG ea25df13c30ffb0706fda6e505893ba4ffeaac47
+    GIT_TAG 5d4b29ddcbb7cb9c013a8c55fa9c16dc9cce9645
 )
 
 FetchContent_Declare(
@@ -79,11 +79,7 @@ qt_add_executable(
     
     src/main.cpp
     src/mainwindow.cpp
-    src/humanengine.cpp
-    src/gameworker.cpp
     src/countdowntimer.cpp
-    src/guisettings.cpp
-    src/texteditor.cpp
 
     src/boardview/graphicspiece.cpp
     src/boardview/graphicsboard.cpp
@@ -95,7 +91,10 @@ qt_add_executable(
     ${cuteataxx_SOURCE_DIR}/src/core/engine/create.cpp
     ${cuteataxx_SOURCE_DIR}/src/core/play.cpp
     ${cuteataxx_SOURCE_DIR}/src/core/pgn.cpp
+    ${cuteataxx_SOURCE_DIR}/src/core/parse/openings.cpp
     ${cuteataxx_SOURCE_DIR}/src/core/parse/settings.cpp
+    ${cuteataxx_SOURCE_DIR}/src/core/match/run.cpp
+    ${cuteataxx_SOURCE_DIR}/src/core/match/worker.cpp
 )
 
 target_link_libraries(

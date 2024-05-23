@@ -228,7 +228,20 @@ void BoardScene::on_game_finished(GameThingy result) {
     m_move_arrows = nullptr;
     clear_selection();
 
-    auto text = new QGraphicsTextItem(QString::fromStdString(result_string(result.result)), m_squares);
+    const QString result_string = [result]() {
+        switch (result.result) {
+            case libataxx::Result::BlackWin:
+                return "1-0";
+            case libataxx::Result::WhiteWin:
+                return "0-1";
+            case libataxx::Result::Draw:
+                return "1/2-1/2";
+            default:
+                return "*";
+        }
+    }();
+
+    auto text = new QGraphicsTextItem(result_string, m_squares);
     auto font = text->font();
     font.setPointSize(10);
     font.setBold(true);

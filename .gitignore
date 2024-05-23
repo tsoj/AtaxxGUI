@@ -1,4 +1,6 @@
 build
+build_backup
 bin
 .vscode
 .cache
+cuteataxxSettings.json

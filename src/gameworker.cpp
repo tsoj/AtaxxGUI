@@ -11,6 +11,17 @@ void GameWorker::start_game() {
     m_stop_flag = false;
 
     emit update_time_control(m_game.engine1.tc, m_game.engine2.tc, libataxx::Position(m_game.fen).get_turn());
+
+    const auto callbacks = Callbacks {
+    std::function<void(const std::string &)> on_engine_start;
+    std::function<void(const int, const std::string &, const std::string &, const std::string &)> on_game_started;
+    std::function<void(const int, const std::string &, const std::string &)> on_game_finished;
+    std::function<void(const Results &)> on_results_update;
+    std::function<void(const std::string &)> on_info_send;
+    std::function<void(const std::string &)> on_info_recv;
+    std::function<void(const libataxx::Move &, const int)> on_move;
+};
+
     const auto result = play(
         m_adjudication, m_game, m_engine1, m_engine2, [this](GameThingy info, SearchSettings tc1, SearchSettings tc2) {
             Q_ASSERT(info.history.size() > 0);

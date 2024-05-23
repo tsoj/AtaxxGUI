@@ -5,6 +5,10 @@
 #include <qmessagebox.h>
 #include <qpushbutton.h>
 #include <../core/engine/create.hpp>
+#include <../core/match/callbacks.hpp>
+#include <../core/match/run.hpp>
+#include <../core/parse/openings.hpp>
+#include <../core/parse/settings.hpp>
 #include <../core/pgn.hpp>
 #include <QApplication>
 #include <QDir>
@@ -29,10 +33,10 @@
 #include "boardview/boardscene.hpp"
 #include "boardview/boardview.hpp"
 #include "boardview/images.hpp"
-#include "engine/settings.hpp"
-#include "guisettings.hpp"
-#include "humanengine.hpp"
-#include "texteditor.hpp"
+// #include "engine/settings.hpp"
+// #include "guisettings.hpp"
+// #include "humanengine.hpp"
+// #include "texteditor.hpp"
 
 // #include "boardview/boardscene.hpp"
 
@@ -60,183 +64,38 @@ auto get_recv_send_callbacks(const std::string &engine_name) {
                          write_line(msg, "<-- ");
                      }};
 }
-
-std::string getSettingsFilePath() {
-    std::string altSettingPath = QDir::homePath().toStdString() + "/.AtaxxGUI/settings.json";
-    if (std::filesystem::exists(altSettingPath)) {
-        return altSettingPath;
-    }
-    return QCoreApplication::applicationDirPath().toStdString() + "/settings.json";
-}
-
-const std::vector<std::string> start_positions = {"x5o/7/2-1-2/7/2-1-2/7/o5x x 0 1",
-                                                  "x5o/7/7/7/7/7/o5x x 0 1",
-                                                  "x5o/1-3-1/2-1-2/7/2-1-2/1-3-1/o5x x 0 1",
-                                                  "x5o/7/3-3/2-1-2/3-3/7/o5x x 0 1",
-                                                  "x5o/3-3/3-3/1--1--1/3-3/3-3/o5x x 0 1",
-                                                  "x2-2o/7/7/-5-/7/7/o2-2x x 0 1",
-                                                  "x2-2o/3-3/3-3/---1---/3-3/3-3/o2-2x x 0 1",
-                                                  "x5o/2-1-2/1-3-1/7/1-3-1/2-1-2/o5x x 0 1",
-                                                  "x1-1-1o/7/-5-/7/-5-/7/o1-1-1x x 0 1",
-                                                  "x2-2o/3-3/2---2/7/2---2/3-3/o2-2x x 0 1",
-                                                  "x2-2o/3-3/7/--3--/7/3-3/o2-2x x 0 1",
-                                                  "x1-1-1o/2-1-2/2-1-2/7/2-1-2/2-1-2/o1-1-1x x 0 1",
-                                                  "x5o/7/2-1-2/3-3/2-1-2/7/o5x x 0 1",
-                                                  "x5o/7/3-3/2---2/3-3/7/o5x x 0 1"};
-
-const std::string human_engine_name = "Human player";
-const std::string example_engine_name = "Example engine";
-
-const std::string default_settings_string =
-    "{"
-    "    \"timecontrol\": {"
-    "        \"time\": 15000,"
-    "        \"inc\": 1000"
-    "    },"
-    "    \"options\": {"
-    "        \"debug\": \"false\","
-    "        \"threads\": \"1\","
-    "        \"hash\": \"128\","
-    "        \"ownbook\": \"false\""
-    "    },"
-    "    \"engines\": ["
-    "        {"
-    "            \"name\": \"" +
-    example_engine_name +
-    "\","
-    "            \"path\": \"/path/to/example/engine\","
-    "            \"protocol\": \"UAI\","
-    "            \"options\": {"
-    "                \"ownbook\": \"true\""
-    "            }"
-    "        }"
-    "    ]"
-    "}";
 }  // namespace
 
-void MainWindow::load_settings() {
-    if (!std::filesystem::exists(m_settings_file_path)) {
-        std::ofstream f(m_settings_file_path, std::fstream::out | std::fstream::app);
-        if (!f.is_open()) {
-            throw std::runtime_error("Couldn't open settings file");
-        }
-        f << nlohmann::json::parse(default_settings_string).dump(4);
-        f.close();
-    }
-
-    nlohmann::json j;
-    std::ifstream input_file(m_settings_file_path);
-    if (input_file.is_open()) {
-        input_file >> j;
-        input_file.close();
-    } else {
-        throw std::runtime_error("Could not open the file for reading");
-    }
-
-    // Pretty print the JSON object to a string
-    std::string pretty_json = j.dump(4);
-
-    // Write the pretty JSON string back to the file
-    std::ofstream output_file(m_settings_file_path);
-    if (output_file.is_open()) {
-        output_file << pretty_json;
-        output_file.close();
-    } else {
-        throw std::runtime_error("Could not open the file for writing");
-    }
-
-    std::cout << "Using settings file: " << m_settings_file_path << std::endl;
-    const auto settings = GuiSettings(m_settings_file_path.string());
-    m_engines.clear();
-    for (const auto &engine : settings.engines) {
-        m_engines[engine.name] = engine;
-        if (engine.name == example_engine_name) {
-            m_engines[engine.name].builtin = "mostcaptures";
-        }
-    }
-    if (m_engines.contains(human_engine_name)) {
-        throw std::runtime_error("Settings must not contain an engine called \"" + human_engine_name + "\"");
-    }
-
-    for (auto engineSelection : std::vector{m_engine_selection1, m_engine_selection2}) {
-        engineSelection->clear();
-        engineSelection->addItem(human_engine_name.c_str());
-        for (const auto &[engineName, engine] : m_engines) {
-            engineSelection->addItem(engineName.c_str());
-        }
-    }
-
-    m_time_spin_box->setTime(QTime(0, 0).addMSecs(std::max(settings.tc.wtime, settings.tc.btime)));
-    m_inc_spin_box->setTime(QTime(0, 0, 0).addMSecs(std::max(settings.tc.winc, settings.tc.binc)));
-}
-
-MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), m_settings_file_path(getSettingsFilePath()) {
-    QGridLayout *tc_layout = new QGridLayout();
-    QLabel *time_label = new QLabel("Time (HH:mm:ss): ", this);
-    QLabel *inc_label = new QLabel("Increment (mm:ss): ", this);
-    m_time_spin_box = new QTimeEdit(this);
-    m_inc_spin_box = new QTimeEdit(this);
+MainWindow::MainWindow(const std::string &settingsFileName, QWidget *parent) : QMainWindow(parent) {
     m_board_scene = new BoardScene(this);
     m_board_view = new BoardView(m_board_scene, this);
-    m_human_engine = std::make_shared<HumanEngine>();
     QWidget *central_widget = new QWidget(this);
     QHBoxLayout *main_layout = new QHBoxLayout(central_widget);
     QVBoxLayout *left_layout = new QVBoxLayout();
-    m_toggle_game_button = new QPushButton("Start Game", this);
-    m_engine_selection1 = new QComboBox(this);
-    m_engine_selection2 = new QComboBox(this);
     m_clock_piece_white = new QLabel(this);
     m_clock_piece_black = new QLabel(this);
-    QPushButton *edit_settings_button = new QPushButton("Edit settings.json", this);
-    QGridLayout *engine_selection_layout = new QGridLayout();
     QVBoxLayout *middle_layout = new QVBoxLayout();
     QHBoxLayout *clock_layout = new QHBoxLayout();
-    m_selection_piece_white = new QLabel(this);
-    m_selection_piece_black = new QLabel(this);
+    m_material_balance_piece_white = new QLabel(this);
+    m_material_balance_piece_black = new QLabel(this);
     m_turn_radio_white = new QRadioButton;
     m_turn_radio_black = new QRadioButton;
     m_clock_white = new CountdownTimer(this);
     m_clock_black = new CountdownTimer(this);
-    QHBoxLayout *set_fen_layout = new QHBoxLayout();
-    QLabel *fen_label = new QLabel("FEN: ", this);
-    m_fen_text_field = new QLineEdit(this);
-    m_fen_set_fen = new QPushButton("Set", this);
-    m_start_pos_selection = new QComboBox(this);
+    QHBoxLayout *material_balance_layout = new QHBoxLayout();
     QVBoxLayout *right_layout = new QVBoxLayout();
     m_pgn_text_field = new QTextEdit(this);
-    m_human_infinite_time_checkbox = new QCheckBox("Infinite time for human player", this);
     m_piece_theme_selection = new QComboBox(this);
     m_board_theme_selection = new QComboBox(this);
+    m_material_balance_slider = new MaterialSlider(this);
 
-    load_settings();
     PieceImages::load();
 
-    connect(m_board_scene, &BoardScene::human_move, m_human_engine.get(), &HumanEngine::on_human_move);
-
-    connect(m_human_engine.get(), &HumanEngine::need_human_move_input, m_board_scene, &BoardScene::accept_move_input);
+    const auto settings = parse::settings(settingsFileName);
+    const auto openings = parse::openings(settings.openings_path, settings.shuffle);
 
     // Create central widget
     setCentralWidget(central_widget);
-
-    connect(edit_settings_button, &QPushButton::clicked, this, &MainWindow::edit_settings);
-
-    tc_layout->addWidget(time_label, 0, 0);
-    tc_layout->addWidget(m_time_spin_box, 0, 1);
-    tc_layout->addWidget(inc_label, 1, 0);
-    tc_layout->addWidget(m_inc_spin_box, 1, 1);
-
-    m_time_spin_box->setDisplayFormat("HH:mm:ss");
-    m_time_spin_box->setTimeRange(QTime(0, 0, 0), QTime(23, 59, 59));
-
-    m_inc_spin_box->setDisplayFormat("mm:ss");
-    m_inc_spin_box->setTimeRange(QTime(0, 0, 0), QTime(59, 59));
-    left_layout->addLayout(tc_layout);
-    left_layout->addWidget(m_human_infinite_time_checkbox);
-
-    m_human_infinite_time_checkbox->setCheckState(Qt::CheckState::Checked);
-
-    set_label_piece_pixmap(m_selection_piece_white, libataxx::Piece::White, m_engine_selection2->height());
-    set_label_piece_pixmap(m_selection_piece_black, libataxx::Piece::Black, m_engine_selection1->height());
 
     m_piece_theme_selection->setPlaceholderText("Select piece theme");
     m_board_theme_selection->setPlaceholderText("Select board theme");
@@ -253,9 +112,9 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), m_settings_file_p
             set_label_piece_pixmap(this->m_clock_piece_black, libataxx::Piece::Black, this->m_clock_black->height());
 
             set_label_piece_pixmap(
-                this->m_selection_piece_white, libataxx::Piece::White, this->m_engine_selection2->height());
+                m_material_balance_piece_white, libataxx::Piece::White, m_material_balance_slider->height());
             set_label_piece_pixmap(
-                this->m_selection_piece_black, libataxx::Piece::Black, this->m_engine_selection1->height());
+                m_material_balance_piece_black, libataxx::Piece::Black, m_material_balance_slider->height());
 
             this->m_piece_theme_selection->setCurrentIndex((-1));
         }
@@ -269,26 +128,10 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), m_settings_file_p
         }
     });
 
-    engine_selection_layout->addWidget(m_selection_piece_black, 0, 0);
-    engine_selection_layout->addWidget(m_selection_piece_white, 1, 0);
-    engine_selection_layout->addWidget(m_engine_selection1, 0, 1);
-    engine_selection_layout->addWidget(m_engine_selection2, 1, 1);
-
-    left_layout->addLayout(engine_selection_layout);
-    left_layout->addWidget(m_toggle_game_button);
-    left_layout->addWidget(edit_settings_button);
     left_layout->addWidget(m_piece_theme_selection);
     left_layout->addWidget(m_board_theme_selection);
     left_layout->addStretch(1);
     main_layout->addLayout(left_layout);
-
-    connect(m_toggle_game_button, &QPushButton::clicked, [this]() {
-        if (this->m_toggle_game_button->text() == "Start Game") {
-            start_game();
-        } else {
-            stop_game();
-        }
-    });
 
     set_label_piece_pixmap(m_clock_piece_white, libataxx::Piece::White, m_clock_white->height());
     set_label_piece_pixmap(m_clock_piece_black, libataxx::Piece::Black, m_clock_black->height());
@@ -313,45 +156,18 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), m_settings_file_p
     m_board_view->setEnabled(true);
     middle_layout->addWidget(m_board_view);
 
-    set_fen_layout->addWidget(fen_label);
+    set_label_piece_pixmap(m_material_balance_piece_white, libataxx::Piece::White, m_material_balance_slider->height());
+    set_label_piece_pixmap(m_material_balance_piece_black, libataxx::Piece::Black, m_material_balance_slider->height());
+    material_balance_layout->addWidget(m_material_balance_piece_white);
+    material_balance_layout->addWidget(m_material_balance_slider);
+    material_balance_layout->addWidget(m_material_balance_piece_black);
 
-    set_fen_layout->addWidget(m_fen_text_field);
-
-    connect(m_board_scene, &BoardScene::new_fen, m_fen_text_field, &QLineEdit::setText);
-    connect(m_fen_text_field, &QLineEdit::editingFinished, [this]() {
-        if (m_game_worker == nullptr) {
-            m_board_scene->set_board(libataxx::Position(m_fen_text_field->text().toStdString()));
-        } else {
-            this->m_fen_text_field->setText(QString::fromStdString(m_board_scene->board().get_fen()));
-        }
-    });
-
-    set_fen_layout->addWidget(m_fen_set_fen);
-    middle_layout->addLayout(set_fen_layout);
-
-    m_start_pos_selection->setPlaceholderText("Select start position");
-    for (size_t i = 0; i < start_positions.size(); ++i) {
-        m_start_pos_selection->addItem((std::to_string(i + 1) + ". " + start_positions.at(i)).c_str());
-    }
-    connect(m_start_pos_selection, &QComboBox::currentTextChanged, [this](QString text) {
-        if (this->m_start_pos_selection->currentIndex() != -1 && m_game_worker == nullptr) {
-            auto startpos = text.toStdString();
-            while (true) {
-                auto c = startpos.front();
-                startpos.erase(0, 1);
-                if (c == '.') break;
-            }
-            this->m_board_scene->set_board(libataxx::Position(startpos));
-            this->m_start_pos_selection->setCurrentIndex((-1));
-        }
-    });
-
-    m_start_pos_selection->setCurrentIndex((-1));
-    middle_layout->addWidget(m_start_pos_selection);
+    middle_layout->addLayout(material_balance_layout);
 
     main_layout->addLayout(middle_layout);
 
     // Create right vertical layout for text field
+    // TODO add move list
     m_pgn_text_field->setReadOnly(true);
     right_layout->addWidget(m_pgn_text_field);
 
@@ -365,17 +181,9 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), m_settings_file_p
     main_layout->setStretch(1, 3);
     main_layout->setStretch(2, 1);
 
-    m_board_scene->set_board(libataxx::Position(start_positions.front()));
+    m_board_scene->set_board(libataxx::Position("x5o/7/2-1-2/7/2-1-2/7/o5x x 0 1"));
 }
-
-void MainWindow::edit_settings() {
-    TextEditor *editor = new TextEditor(m_settings_file_path.string());
-    connect(editor, &TextEditor::changed_settings, this, &MainWindow::load_settings);
-    editor->setAttribute(Qt::WA_DeleteOnClose);
-    editor->resize(size());
-    editor->show();
-}
-
+/*
 void MainWindow::start_game() {
     const int time = m_time_spin_box->time().msecsSinceStartOfDay();
     const int inc = m_inc_spin_box->time().msecsSinceStartOfDay();
@@ -545,7 +353,7 @@ void MainWindow::stop_game() {
     m_fen_set_fen->setEnabled(true);
     m_start_pos_selection->setEnabled(true);
 }
-
+*/
 MainWindow::~MainWindow() {
-    stop_game();
+    // stop_game();
 }
