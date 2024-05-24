@@ -24,6 +24,33 @@
 // #include "gameworker.hpp"
 // #include "humanengine.hpp"
 
+class TournamentWorker : public QObject {
+    Q_OBJECT
+
+   public:
+    TournamentWorker(const std::string& settings_path,
+                     const int seconds_between_games,
+                     const int milliseconds_between_moves)
+        : m_settings_path(settings_path),
+          m_seconds_between_games(seconds_between_games),
+          m_milliseconds_between_moves(milliseconds_between_moves) {
+    }
+
+   public slots:
+    void start();
+
+   signals:
+    void new_game(const std::string& fen, const std::string& name1, const std::string& name2, int wtime, int btime);
+    void game_finished(const libataxx::Result& result);
+    void results_update(const Results& results);
+    void new_move(const libataxx::Move& move, int ms);
+
+   private:
+    std::string m_settings_path;
+    int m_seconds_between_games;
+    int m_milliseconds_between_moves;
+};
+
 class MaterialSlider : public QSlider {
     Q_OBJECT
    public:
@@ -37,7 +64,7 @@ class MaterialSlider : public QSlider {
             "}"
             "QSlider::handle:horizontal {"
             "background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #dcdcdc, stop:1 #b4b4b4);"
-            "border: 1px solid #5c5c5c;"
+            "border: 1px solid transparent;"
             "height: 26px;"     // handle thickness
             "width: 26px;"      // Handle width
             "margin: -16px 0;"  // Handle margin
@@ -67,7 +94,10 @@ class MainWindow : public QMainWindow {
     Q_OBJECT
 
    public:
-    explicit MainWindow(const std::string& settingsFileName, QWidget* parent = nullptr);
+    explicit MainWindow(const std::string& settingsFileName,
+                        int seconds_between_games,
+                        int milliseconds_between_moves,
+                        QWidget* parent = nullptr);
     ~MainWindow();
 
    private:
@@ -94,13 +124,10 @@ class MainWindow : public QMainWindow {
     std::filesystem::path m_settings_file_path;
     std::map<std::string, EngineSettings> m_engines;
 
-    std::thread m_thread;
-
-    Settings m_settings;
-    Callbacks m_callbacks;
-    std::vector<std::string> m_openings;
-
     QLabel* m_engine_name_black{nullptr};
     QLabel* m_engine_name_white{nullptr};
     QTableWidget* m_results_table{nullptr};
+
+    TournamentWorker* m_tournament_worker{nullptr};
+    QThread m_worker_thread;
 };

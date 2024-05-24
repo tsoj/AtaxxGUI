@@ -64,31 +64,33 @@ auto get_recv_send_callbacks(const std::string &engine_name) {
 
 void fill_table(QTableWidget *results_table, const Results &results) {
     results_table->clear();
+    results_table->clearContents();
+    results_table->setRowCount(0);
     results_table->setColumnCount(6);
 
     // Set the column headers
-    QStringList headers = {"Score", "Engine", "Wins", "Losses", "Draws", "Crashes"};
+    QStringList headers = {"Engine", "Score", "Wins", "Losses", "Draws", "Crashes"};
     results_table->setHorizontalHeaderLabels(headers);
 
     // Set the column data types by setting appropriate item flags and validators if necessary
     // For simplicity, this example does not include validators, but you can add them as needed
 
     // Adjust the header to fit the content
-    results_table->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+    // results_table->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
 
     for (const auto &[engine, score] : results.scores) {
-        results_table->insertRow(results_table->rowCount());
-        const int row = results_table->rowCount() - 1;
-
-        // Score (int)
-        const int scoreScore = (100 * (score.draws + 2 * score.wins)) / (2 * score.played);
-        auto *rankItem =
-            new QTableWidgetItem((std::to_string(scoreScore) + " %").c_str());  // Replace with the actual engine name
-        results_table->setItem(row, 0, rankItem);
+        const int row = results_table->rowCount();
+        results_table->insertRow(row);
 
         // Engine (string)
         auto *engineItem = new QTableWidgetItem(engine.c_str());  // Replace with the actual engine name
-        results_table->setItem(row, 1, engineItem);
+        results_table->setItem(row, 0, engineItem);
+
+        // Score (string)
+        const int scoreScore = (100 * (score.draws + 2 * score.wins)) / (2 * score.played);
+        auto *rankItem =
+            new QTableWidgetItem((std::to_string(scoreScore) + " %").c_str());  // Replace with the actual engine name
+        results_table->setItem(row, 1, rankItem);
 
         // Wins (int)
         auto *winsItem = new QTableWidgetItem();
@@ -110,11 +112,21 @@ void fill_table(QTableWidget *results_table, const Results &results) {
         crashesItem->setData(Qt::EditRole, QVariant(score.crashes));  // Replace 5 with the actual draws count
         results_table->setItem(row, 5, crashesItem);
     }
+
+    results_table->sortByColumn(1, Qt::SortOrder::DescendingOrder);
+
+    results_table->setVisible(false);
+    results_table->resizeColumnsToContents();
+    results_table->setVisible(true);
 }
 
 }  // namespace
 
-MainWindow::MainWindow(const std::string &settingsFileName, QWidget *parent) : QMainWindow(parent) {
+MainWindow::MainWindow(const std::string &settings_path,
+                       const int seconds_between_games,
+                       const int milliseconds_between_moves,
+                       QWidget *parent)
+    : QMainWindow(parent) {
     m_board_scene = new BoardScene(this);
     m_board_view = new BoardView(m_board_scene, this);
     auto *central_widget = new QWidget(this);
@@ -141,6 +153,10 @@ MainWindow::MainWindow(const std::string &settingsFileName, QWidget *parent) : Q
     m_engine_name_white = new QLabel(this);
 
     m_results_table = new QTableWidget(this);
+
+    // TODO swap left and right for red and blue clock and balance
+
+    // TODO add score graph
 
     PieceImages::load();
 
@@ -180,6 +196,7 @@ MainWindow::MainWindow(const std::string &settingsFileName, QWidget *parent) : Q
 
     left_layout->addWidget(m_piece_theme_selection);
     left_layout->addWidget(m_board_theme_selection);
+    left_layout->addWidget(m_results_table);
     left_layout->addStretch(1);
     main_layout->addLayout(left_layout);
 
@@ -229,8 +246,8 @@ MainWindow::MainWindow(const std::string &settingsFileName, QWidget *parent) : Q
     // Set layout to central widget
     central_widget->setLayout(main_layout);
 
-    main_layout->setStretch(0, 1);
-    main_layout->setStretch(1, 3);
+    main_layout->setStretch(0, 3);
+    main_layout->setStretch(1, 6);
     main_layout->setStretch(2, 1);
 
     m_board_scene->set_board(libataxx::Position("x5o/7/2-1-2/7/2-1-2/7/o5x x 0 1"));
@@ -240,8 +257,91 @@ MainWindow::MainWindow(const std::string &settingsFileName, QWidget *parent) : Q
     m_engine_name_black->setText("ao8sjdoiasjdoi");
     m_engine_name_black->setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
 
-    m_settings = parse::settings(settingsFileName);
-    m_openings = parse::openings(m_settings.openings_path, m_settings.shuffle);
+    m_tournament_worker = new TournamentWorker(settings_path, seconds_between_games, milliseconds_between_moves);
+
+    m_tournament_worker->moveToThread(&m_worker_thread);
+
+    connect(&m_worker_thread, &QThread::finished, m_tournament_worker, &QObject::deleteLater);
+
+    connect(
+        m_tournament_worker,
+        &TournamentWorker::new_game,
+        this,
+        [&](const std::string &fen,
+            const std::string &name1,
+            const std::string &name2,
+            const int wtime,
+            const int btime) {
+            std::cout << name1 << std::endl;
+            std::cout << name2 << std::endl;
+            m_engine_name_black->setText(name1.c_str());
+            m_engine_name_white->setText(name2.c_str());
+            m_board_scene->set_board(libataxx::Position(fen));
+            m_clock_white->set_time(QTime(0, 0).addMSecs(wtime));
+            m_clock_black->set_time(QTime(0, 0).addMSecs(btime));
+        },
+        Qt::QueuedConnection);
+
+    connect(
+        m_tournament_worker,
+        &TournamentWorker::game_finished,
+        this,
+        [&](const libataxx::Result &result) {
+            m_board_scene->on_game_finished(result);
+        },
+        Qt::QueuedConnection);
+
+    connect(
+        m_tournament_worker,
+        &TournamentWorker::results_update,
+        this,
+        [&](const Results &results) {
+            fill_table(m_results_table, results);
+        },
+        Qt::QueuedConnection);
+
+    connect(
+        m_tournament_worker,
+        &TournamentWorker::new_move,
+        this,
+        [&](const libataxx::Move &move, int ms) {
+            const auto board = m_board_scene->board();
+            if (board.get_turn() == libataxx::Side::Black) {
+                m_clock_black->set_time(QTime(0, 0).addMSecs(ms));
+            } else {
+                m_clock_white->set_time(QTime(0, 0).addMSecs(ms));
+            }
+
+            if (board.get_turn() == libataxx::Side::Black) {
+                m_clock_white->stop_clock();
+                m_clock_black->start_clock();
+
+                m_turn_radio_white->setChecked(false);
+                m_turn_radio_black->setChecked(true);
+
+            } else {
+                m_clock_black->stop_clock();
+                m_clock_white->start_clock();
+
+                m_turn_radio_black->setChecked(false);
+                m_turn_radio_white->setChecked(true);
+            }
+
+            m_material_balance_slider->setSliderPosition(board.get_score());
+
+            m_pgn_text_field->append(static_cast<std::string>(move).c_str());
+
+            this->m_board_scene->on_new_move(move);
+        },
+        Qt::QueuedConnection);
+
+    m_worker_thread.start();
+    QMetaObject::invokeMethod(m_tournament_worker, "start", Qt::QueuedConnection);
+}
+
+void TournamentWorker::start() {
+    const auto settings = parse::settings(m_settings_path);
+    const auto openings = parse::openings(settings.openings_path, settings.shuffle);
 
     // for(const auto e : m_settings.engines)
     // {
@@ -253,28 +353,22 @@ MainWindow::MainWindow(const std::string &settingsFileName, QWidget *parent) : Q
 
     // assert(false);
 
-    m_callbacks = Callbacks{
+    const auto callbacks = Callbacks{
         .on_engine_start =
             [](const std::string &) {
             },
         .on_game_started =
             [&](const int, const std::string &fen, const std::string &name1, const std::string &name2) {
-                std::cout << name1 << std::endl;
-                std::cout << name2 << std::endl;
-                m_engine_name_black->setText(name1.c_str());
-                m_engine_name_white->setText(name2.c_str());
-                m_board_scene->set_board(libataxx::Position(fen));
-                m_clock_white->set_time(QTime(0, 0).addMSecs(m_settings.tc.wtime));
-                m_clock_black->set_time(QTime(0, 0).addMSecs(m_settings.tc.btime));
+                emit new_game(fen, name1, name2, settings.tc.wtime, settings.tc.btime);
             },
         .on_game_finished =
             [&](const libataxx::Result result, const std::string &, const std::string &) {
-                m_board_scene->on_game_finished(result);
-                std::this_thread::sleep_for(std::chrono::seconds(10));
+                emit game_finished(result);
+                std::this_thread::sleep_for(std::chrono::seconds(m_seconds_between_games));
             },
         .on_results_update =
             [&](const Results &results) {
-                fill_table(m_results_table, results);
+                emit results_update(results);
             },
         .on_info_send =
             [](const std::string &) {
@@ -284,22 +378,13 @@ MainWindow::MainWindow(const std::string &settingsFileName, QWidget *parent) : Q
             },
         .on_move =
             [&](const libataxx::Move &move, const int ms) {
-                if (m_board_scene->board().get_turn() == libataxx::Side::Black) {
-                    m_clock_black->set_time(QTime(0, 0).addMSecs(ms));
-                } else {
-                    m_clock_white->set_time(QTime(0, 0).addMSecs(ms));
-                }
-
-                this->m_board_scene->on_new_move(move);
-                // TODO update move list
-                // screen.PostEvent(Event::Custom);
-                std::this_thread::sleep_for(std::chrono::seconds(1));
+                emit new_move(move, ms);
+                // TODO wait a little to make the game watchable by a human
+                std::this_thread::sleep_for(std::chrono::milliseconds(m_milliseconds_between_moves));
             },
     };
 
-    m_thread = std::thread([&]() {
-        const auto results = run(m_settings, m_openings, m_callbacks);
-    });
+    [[maybe_unused]] const auto results = run(settings, openings, callbacks);
 }
 /*
 void MainWindow::start_game() {
@@ -474,7 +559,4 @@ void MainWindow::stop_game() {
 */
 MainWindow::~MainWindow() {
     // stop_game();
-    if (m_thread.joinable()) {
-        m_thread.join();
-    }
 }
