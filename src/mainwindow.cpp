@@ -209,14 +209,16 @@ MainWindow::MainWindow(const std::string &settings_path,
     m_turn_radio_white->setMaximumWidth(m_clock_black->height());
     m_turn_radio_black->setMaximumWidth(m_clock_black->height());
 
-    clock_layout->addWidget(m_turn_radio_white);
-    clock_layout->addWidget(m_clock_piece_white);
-    clock_layout->addWidget(m_engine_name_white);
-    clock_layout->addWidget(m_clock_white);
-    clock_layout->addWidget(m_clock_black);
-    clock_layout->addWidget(m_engine_name_black);
-    clock_layout->addWidget(m_clock_piece_black);
+
     clock_layout->addWidget(m_turn_radio_black);
+    clock_layout->addWidget(m_clock_piece_black);
+    clock_layout->addWidget(m_engine_name_black);
+    clock_layout->addWidget(m_clock_black);
+    clock_layout->addWidget(m_clock_white);
+    clock_layout->addWidget(m_engine_name_white);
+    clock_layout->addWidget(m_clock_piece_white);
+    clock_layout->addWidget(m_turn_radio_white);
+
     middle_layout->addLayout(clock_layout);
 
     m_clock_white->set_time(QTime(23, 59, 59));
@@ -227,9 +229,9 @@ MainWindow::MainWindow(const std::string &settings_path,
 
     set_label_piece_pixmap(m_material_balance_piece_white, libataxx::Piece::White, m_material_balance_slider->height());
     set_label_piece_pixmap(m_material_balance_piece_black, libataxx::Piece::Black, m_material_balance_slider->height());
-    material_balance_layout->addWidget(m_material_balance_piece_white);
-    material_balance_layout->addWidget(m_material_balance_slider);
     material_balance_layout->addWidget(m_material_balance_piece_black);
+    material_balance_layout->addWidget(m_material_balance_slider);
+    material_balance_layout->addWidget(m_material_balance_piece_white);
 
     middle_layout->addLayout(material_balance_layout);
 
@@ -327,7 +329,7 @@ MainWindow::MainWindow(const std::string &settings_path,
                 m_turn_radio_white->setChecked(true);
             }
 
-            m_material_balance_slider->setSliderPosition(board.get_score());
+            m_material_balance_slider->setSliderPosition(-board.get_score());
 
             m_pgn_text_field->append(static_cast<std::string>(move).c_str());
 

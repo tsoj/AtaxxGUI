@@ -1,5 +1,5 @@
 build
-build_backup
+build_backup*
 bin
 .vscode
 .cache
