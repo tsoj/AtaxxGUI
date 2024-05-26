@@ -167,6 +167,7 @@ MainWindow::MainWindow(const std::string &settings_path,
 
     m_results_table = new QTableWidget(this);
     m_chart_view = new QChartView(this);
+    m_material_label = new QLabel(this);
 
     PieceImages::load();
 
@@ -252,7 +253,9 @@ MainWindow::MainWindow(const std::string &settings_path,
 
     // Create right vertical layout for text field
     m_pgn_text_field->setReadOnly(true);
+    m_material_label->setFixedHeight(m_material_balance_piece_black->height());
     right_layout->addWidget(m_pgn_text_field);
+    right_layout->addWidget(m_material_label);
 
     // Add both layouts to the main layout
     main_layout->addLayout(right_layout);
@@ -295,7 +298,9 @@ MainWindow::MainWindow(const std::string &settings_path,
             m_clock_black->set_time(QTime(0, 0).addMSecs(btime));
             m_scores.clear();
             m_pgn_text_field->setText("");
-            m_material_balance_slider->setSliderPosition(-m_board_scene->board().get_score());
+            const int material = m_board_scene->board().get_score();
+            m_material_balance_slider->setSliderPosition(-material);
+            m_material_label->setText(("Material: " + std::to_string(material)).c_str());
         },
         Qt::QueuedConnection);
 
@@ -387,7 +392,9 @@ MainWindow::MainWindow(const std::string &settings_path,
                 m_turn_radio_white->setChecked(true);
             }
 
-            m_material_balance_slider->setSliderPosition(-board.get_score());
+            const int material = board.get_score();
+            m_material_balance_slider->setSliderPosition(-material);
+            m_material_label->setText(("Material: " + std::to_string(material)).c_str());
 
             m_pgn_text_field->append(static_cast<std::string>(move).c_str());
 

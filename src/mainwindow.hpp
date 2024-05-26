@@ -121,6 +121,7 @@ class MainWindow : public QMainWindow {
     QLabel* m_clock_piece_black{nullptr};
 
     QTextEdit* m_pgn_text_field{nullptr};
+    QLabel* m_material_label{nullptr};
 
     QLabel* m_material_balance_piece_white{nullptr};
     QLabel* m_material_balance_piece_black{nullptr};
