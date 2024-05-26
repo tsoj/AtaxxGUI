@@ -1,0 +1,60 @@
+{
+  "games": 100,
+  "ratinginterval": 100,
+  "verbose": false,
+  "debug": true,
+  "recover": true,
+  "colour1": "Red",
+  "colour2": "Blue",
+  "tournament": "roundrobin_mixed",
+  "print_early": true,
+  "openings": {
+    "path": "./res/ply3_fair.txt",
+    "repeat": true,
+    "shuffle": true
+  },
+  "timecontrol": {
+    "time": 10000,
+    "inc": 100
+  },
+  "options": {
+    "debug": "false",
+    "threads": "8",
+    "hash": "256",
+    "ownbook": "false"
+  },
+  "pgn": {
+    "enabled": true,
+    "verbose": true,
+    "override": false,
+    "path": "games.pgn",
+    "event": "Tournament"
+  },
+  "engines": [
+    {
+      "name": "Moonbird",
+      "path": "/home/tsoj/Dokumente/Projects/Moonbird/bin/Moonbird",
+      "protocol": "UAI"
+    },
+    {
+        "name": "Tiktaxx",
+        "path": "/home/tsoj/Dokumente/ataxx_engines/tiktaxx/bin/tiktaxx",
+        "protocol": "UAI"
+    },
+    {
+        "name": "Zataxx",
+        "path": "/home/tsoj/Dokumente/ataxx_engines/Zataxx/target/release/zataxx",
+        "protocol": "UAI"
+    },
+    {
+        "name": "Autaxx",
+        "path": "/home/tsoj/Dokumente/ataxx_engines/autaxx/build/src/autaxx/autaxx",
+        "protocol": "UAI"
+    },
+    {
+        "name": "monty",
+        "path": "/home/tsoj/Dokumente/ataxx_engines/monty/monty",
+        "protocol": "UAI"
+    }
+  ]
+}

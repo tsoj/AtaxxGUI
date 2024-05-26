@@ -40,6 +40,15 @@ msbuild .\AtaxxGUI.sln /p:Configuration=Release
 windeployqt.exe ..\bin\AtaxxGUI.exe
 ```
 
+## Running
+
+You need a cuteataxx settings file. An example can be found at [res/example_cuteataxx_settings.json](res/example_cuteataxx_settings.json). Engine paths may need to be absolute.
+```bash
+# first argument is the path to the settings file,
+# the second argument the wait time in seconds between games,
+# and the third argument is the wait time between moves in milliseconds.
+./bin/AtaxxGUI res/example_cuteataxx_settings.json 10 1000
+```
 
 ## Credits
 
