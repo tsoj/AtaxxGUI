@@ -1,6 +1,7 @@
 
 #pragma once
 
+#include <qmessagebox.h>
 #include <../core/parse/settings.hpp>
 #include <QApplication>
 #include <QCheckBox>
@@ -23,6 +24,7 @@
 #include "boardview/boardview.hpp"
 #include "countdowntimer.hpp"
 // #include "gameworker.hpp"
+#include <QMessageBox>
 #include <QtCharts/QChartView>
 // #include "humanengine.hpp"
 
@@ -103,6 +105,11 @@ class MainWindow : public QMainWindow {
     ~MainWindow();
 
    private:
+    void closeEvent(QCloseEvent* event) override {
+        QMessageBox::warning(this, "", "You must kill this application with ctrl+c               ");
+        event->ignore();
+    }
+
     BoardScene* m_board_scene{nullptr};
     BoardView* m_board_view{nullptr};
 

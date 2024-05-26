@@ -11,7 +11,7 @@ You need to install Git, CMake, a C++ compiler, Boost, and Qt6. TODO qt-charts
 
 On Ubuntu you can do that like this (there will be similar packages for most Linux distros):
 ```bash
-sudo apt install git cmake g++ libboost-dev qt6-base-dev
+sudo apt install git cmake g++ libboost-dev qt6-base-dev qt6-charts-dev
 ```
 
 ### Linux

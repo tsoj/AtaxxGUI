@@ -30,6 +30,7 @@
 #include <QtCharts/QChart>
 #include <algorithm>
 #include <cassert>
+#include <cmath>
 #include <exception>
 #include <filesystem>
 #include <fstream>
@@ -82,38 +83,46 @@ void fill_table(QTableWidget *results_table, const Results &results) {
     // Adjust the header to fit the content
     // results_table->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
 
+    std::vector<std::tuple<std::string, Score, int>> scores;
     for (const auto &[engine, score] : results.scores) {
+        // Score (string)
+        const int rank = (100 * (score.draws + 2 * score.wins)) / std::max(2 * score.played, 1);
+        scores.emplace_back(engine, score, rank);
+    }
+    std::sort(scores.begin(), scores.end(), [](auto a, auto b) {
+        return std::get<2>(a) > std::get<2>(b);
+    });
+
+    for (const auto &[engine, score, rank] : scores) {
         const int row = results_table->rowCount();
         results_table->insertRow(row);
 
         // Engine (string)
-        auto *engineItem = new QTableWidgetItem(engine.c_str());  // Replace with the actual engine name
+        auto *engineItem = new QTableWidgetItem(engine.c_str());
         results_table->setItem(row, 0, engineItem);
 
         // Score (string)
-        const int score_score = (100 * (score.draws + 2 * score.wins)) / std::max(2 * score.played, 1);
-        auto *rankItem =
-            new QTableWidgetItem((std::to_string(score_score) + " %").c_str());  // Replace with the actual engine name
+        auto *rankItem = new QTableWidgetItem((std::to_string(rank) + " %").c_str());
         results_table->setItem(row, 1, rankItem);
 
         // Wins (int)
         auto *winsItem = new QTableWidgetItem();
-        winsItem->setData(Qt::EditRole, QVariant(score.wins));  // Replace 10 with the actual wins count
+        winsItem->setData(Qt::EditRole, QVariant(score.wins));
         results_table->setItem(row, 2, winsItem);
 
         // Losses (int)
         auto *lossesItem = new QTableWidgetItem();
-        lossesItem->setData(Qt::EditRole, QVariant(score.losses));  // Replace 2 with the actual losses count
+        lossesItem->setData(Qt::EditRole, QVariant(score.losses));
         results_table->setItem(row, 3, lossesItem);
 
         // Draws (int)
         auto *drawsItem = new QTableWidgetItem();
-        drawsItem->setData(Qt::EditRole, QVariant(score.draws));  // Replace 5 with the actual draws count
+        drawsItem->setData(Qt::EditRole, QVariant(score.draws));
         results_table->setItem(row, 4, drawsItem);
 
         // Crashes (int)
         auto *crashesItem = new QTableWidgetItem();
-        crashesItem->setData(Qt::EditRole, QVariant(score.crashes));  // Replace 5 with the actual draws count
+        crashesItem->setData(Qt::EditRole, QVariant(score.crashes));
         results_table->setItem(row, 5, crashesItem);
     }
 
@@ -158,10 +167,6 @@ MainWindow::MainWindow(const std::string &settings_path,
 
     m_results_table = new QTableWidget(this);
     m_chart_view = new QChartView(this);
-
-    // TODO swap left and right for red and blue clock and balance
-
-    // TODO add score graph
 
     PieceImages::load();
 
@@ -255,7 +260,7 @@ MainWindow::MainWindow(const std::string &settings_path,
     // Set layout to central widget
     central_widget->setLayout(main_layout);
 
-    main_layout->setStretch(0, 3);
+    main_layout->setStretch(0, 4);
     main_layout->setStretch(1, 6);
     main_layout->setStretch(2, 1);
 
@@ -289,6 +294,8 @@ MainWindow::MainWindow(const std::string &settings_path,
             m_clock_white->set_time(QTime(0, 0).addMSecs(wtime));
             m_clock_black->set_time(QTime(0, 0).addMSecs(btime));
             m_scores.clear();
+            m_pgn_text_field->setText("");
+            m_material_balance_slider->setSliderPosition(-m_board_scene->board().get_score());
         },
         Qt::QueuedConnection);
 
@@ -363,17 +370,6 @@ MainWindow::MainWindow(const std::string &settings_path,
             m_chart->addAxis(axis_x, Qt::AlignBottom);
             m_black_score_series->attachAxis(axis_x);
             m_white_score_series->attachAxis(axis_x);
-
-            // auto axis_x = new QValueAxis();
-            // axis_x->setTitleText("move");
-            // axis_x->setRange(0, m_score_series->count());
-            // axis_x->setLabelFormat("%d");
-            // axis_x->setTickCount(m_score_series->count() + 1);
-            // m_chart->addAxis(axis_x, Qt::AlignBottom);
-            // m_score_series->attachAxis(axis_x);
-
-            // m_chart->createDefaultAxes();
-
             m_chart_view->setChart(m_chart);
 
             if (board.get_turn() == libataxx::Side::Black) {
@@ -407,15 +403,9 @@ void TournamentWorker::start() {
     const auto settings = parse::settings(m_settings_path);
     const auto openings = parse::openings(settings.openings_path, settings.shuffle);
 
-    // for(const auto e : m_settings.engines)
-    // {
-    //     std::cout << "----------------" << std::endl;
-    //     std::cout << e.name << std::endl;
-    //     std::cout << e.path << std::endl;
-    //     std::cout << "----------------" << std::endl;
-    // }
-
-    // assert(false);
+    if (settings.concurrency != 1) {
+        throw std::runtime_error("Only concurrency = 1 is supported");
+    }
 
     std::optional<int64_t> current_cp_score = std::nullopt;
 
@@ -464,7 +454,7 @@ void TournamentWorker::start() {
             },
         .on_move =
             [&](const libataxx::Move &move, const int ms) {
-                emit new_move(move, ms, current_cp_score.value());  //.value_or(0)); // TODO should be value_or
+                emit new_move(move, ms, current_cp_score.value_or(0));
                 current_cp_score = std::nullopt;
                 std::this_thread::sleep_for(std::chrono::milliseconds(m_milliseconds_between_moves));
             },
@@ -472,177 +462,8 @@ void TournamentWorker::start() {
 
     [[maybe_unused]] const auto results = run(settings, openings, callbacks);
 }
-/*
-void MainWindow::start_game() {
-    const int time = m_time_spin_box->time().msecsSinceStartOfDay();
-    const int inc = m_inc_spin_box->time().msecsSinceStartOfDay();
-    const auto tc = SearchSettings::as_time(time, time, inc, inc);
 
-    const auto create_engine = [this, tc](std::string engine_name) {
-        std::shared_ptr<Engine> engine{};
-        EngineSettings engine_settings{};
-
-        if (engine_name == human_engine_name) {
-            engine_settings.name = human_engine_name;
-            engine_settings.tc = this->m_human_infinite_time_checkbox->isChecked() ? SearchSettings::as_depth(1) : tc;
-
-            engine = this->m_human_engine;
-        } else {
-            engine_settings = this->m_engines.at(engine_name);
-            engine_settings.tc = tc;
-
-            const auto [send, recv] = get_recv_send_callbacks(engine_name);
-
-            engine = make_engine(engine_settings, send, recv);
-        }
-        return std::pair{engine, engine_settings};
-    };
-
-    std::shared_ptr<Engine> engine1{nullptr}, engine2{nullptr};
-    EngineSettings engine_setting1, engine_setting2;
-    try {
-        std::tie(engine1, engine_setting1) = create_engine(this->m_engine_selection1->currentText().toStdString());
-        std::tie(engine2, engine_setting2) = create_engine(this->m_engine_selection2->currentText().toStdString());
-    } catch (const std::exception &e) {
-        std::cout << "Failed to create engine: " << e.what() << std::endl;
-        QMessageBox::warning(this, "Failed to create engine", e.what());
-        return;
-    }
-
-    engine_setting1.id = 1;
-    engine_setting2.id = 2;
-
-    this->m_engine_selection1->setEnabled(false);
-    this->m_engine_selection2->setEnabled(false);
-    m_pgn_text_field->setText("");
-
-    this->m_toggle_game_button->setText("Stop Game");
-
-    m_fen_text_field->setReadOnly(true);
-    m_fen_set_fen->setEnabled(false);
-    m_start_pos_selection->setEnabled(false);
-
-    Q_ASSERT(m_game_worker == nullptr);
-    m_game_worker = new GameWorker(
-        AdjudicationSettings{},
-        GameSettings{
-            .fen = this->m_board_scene->board().get_fen(), .engine1 = engine_setting1, .engine2 = engine_setting2},
-        engine1,
-        engine2);
-
-    m_game_worker->moveToThread(&m_worker_thread);
-
-    connect(&m_worker_thread, &QThread::finished, m_game_worker, &QObject::deleteLater);
-
-    connect(m_game_worker,
-            &GameWorker::finished_game,
-            this->m_board_scene,
-            &BoardScene::on_game_finished,
-            Qt::QueuedConnection);
-
-    connect(
-        m_game_worker,
-        &GameWorker::finished_game,
-        this,
-        [this]() {
-            m_clock_white->stop_clock();
-            m_clock_black->stop_clock();
-        },
-        Qt::QueuedConnection);
-
-    connect(
-        m_game_worker,
-        &GameWorker::finished_game,
-        this,
-        [this](GameThingy info) {
-            m_pgn_text_field->setText(QString::fromStdString(get_pgn(
-                PGNSettings{
-
-                },
-                this->m_engine_selection1->currentText().toStdString(),
-                this->m_engine_selection2->currentText().toStdString(),
-                info)));
-            this->stop_game();
-        },
-        Qt::QueuedConnection);
-
-    connect(
-        m_game_worker,
-        &GameWorker::new_move,
-        this,
-        [this](GameThingy info) {
-            this->m_board_scene->on_new_move(info.history.back().move);
-
-            m_pgn_text_field->setText(QString::fromStdString(get_pgn(
-                PGNSettings{
-
-                },
-                this->m_engine_selection1->currentText().toStdString(),
-                this->m_engine_selection2->currentText().toStdString(),
-                info)));
-        },
-        Qt::QueuedConnection);
-
-    // Black is engine1 (tc1)
-    connect(
-        m_game_worker,
-        &GameWorker::update_time_control,
-        this,
-        [this](SearchSettings tc1, SearchSettings tc2, libataxx::Side side_to_move) {
-            if (tc2.type == SearchSettings::Type::Time) {
-                m_clock_white->set_time(QTime(0, 0).addMSecs(tc2.wtime));
-            } else {
-                m_clock_white->set_time(QTime(23, 59, 59));
-            }
-
-            if (tc1.type == SearchSettings::Type::Time) {
-                m_clock_black->set_time(QTime(0, 0).addMSecs(tc1.btime));
-            } else {
-                m_clock_black->set_time(QTime(23, 59, 59));
-            }
-
-            if (side_to_move == libataxx::Side::Black) {
-                m_clock_white->stop_clock();
-                if (tc1.type == SearchSettings::Type::Time) {
-                    m_clock_black->start_clock();
-                }
-
-                m_turn_radio_white->setChecked(false);
-                m_turn_radio_black->setChecked(true);
-
-            } else {
-                m_clock_black->stop_clock();
-                if (tc2.type == SearchSettings::Type::Time) {
-                    m_clock_white->start_clock();
-                }
-
-                m_turn_radio_black->setChecked(false);
-                m_turn_radio_white->setChecked(true);
-            }
-        },
-        Qt::QueuedConnection);
-
-    m_worker_thread.start();
-    QMetaObject::invokeMethod(m_game_worker, "start_game", Qt::QueuedConnection);
-}
-
-void MainWindow::stop_game() {
-    if (m_game_worker != nullptr) {
-        m_game_worker->stopGame();
-
-        m_worker_thread.quit();
-        m_worker_thread.wait();
-        m_game_worker = nullptr;
-    }
-
-    m_engine_selection1->setEnabled(true);
-    m_engine_selection2->setEnabled(true);
-    m_toggle_game_button->setText("Start Game");
-    m_fen_text_field->setReadOnly(false);
-    m_fen_set_fen->setEnabled(true);
-    m_start_pos_selection->setEnabled(true);
-}
-*/
 MainWindow::~MainWindow() {
-    // stop_game();
+    std::cerr << "This program must be stopped using ctrl+c" << std::endl;
+    std::abort();
 }
