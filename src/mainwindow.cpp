@@ -254,6 +254,7 @@ MainWindow::MainWindow(const std::string &settings_path,
     // Create right vertical layout for text field
     m_pgn_text_field->setReadOnly(true);
     m_material_label->setFixedHeight(m_material_balance_piece_black->height());
+    m_material_label->setAlignment(Qt::AlignCenter);
     right_layout->addWidget(m_pgn_text_field);
     right_layout->addWidget(m_material_label);
 
@@ -270,9 +271,9 @@ MainWindow::MainWindow(const std::string &settings_path,
     m_board_scene->set_board(libataxx::Position("x5o/7/2-1-2/7/2-1-2/7/o5x x 0 1"));
 
     m_engine_name_white->setText("hehelai");
-    m_engine_name_white->setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
+    m_engine_name_white->setAlignment(Qt::AlignCenter);
     m_engine_name_black->setText("ao8sjdoiasjdoi");
-    m_engine_name_black->setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
+    m_engine_name_black->setAlignment(Qt::AlignCenter);
 
     m_tournament_worker = new TournamentWorker(settings_path, seconds_between_games, milliseconds_between_moves);
 
