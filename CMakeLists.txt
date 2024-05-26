@@ -19,7 +19,7 @@ FetchContent_Declare(
 FetchContent_Declare(
     cuteataxx
     GIT_REPOSITORY https://github.com/tsoj/cuteataxx
-    GIT_TAG 882af1a372d9e26a4388c7341251fb5b59aea165
+    GIT_TAG bd5e8e9a5fc80801e0f97c7fc6fcb0d5b3adf179
 )
 
 FetchContent_Declare(
