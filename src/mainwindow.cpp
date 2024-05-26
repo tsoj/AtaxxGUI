@@ -331,10 +331,13 @@ MainWindow::MainWindow(const std::string &settings_path,
         &TournamentWorker::new_move,
         this,
         [&](const libataxx::Move &move, const int ms, int cp_score) {
+            
+            this->m_board_scene->on_new_move(move);
+
             const auto board = m_board_scene->board();
 
             size_t black_mod_rest = m_scores.size() % 2;
-            if (board.get_turn() == libataxx::Side::Black) {
+            if (board.get_turn() == libataxx::Side::White) {
                 m_clock_black->set_time(QTime(0, 0).addMSecs(ms));
             } else {
                 m_clock_white->set_time(QTime(0, 0).addMSecs(ms));
@@ -378,6 +381,7 @@ MainWindow::MainWindow(const std::string &settings_path,
             m_white_score_series->attachAxis(axis_x);
             m_chart_view->setChart(m_chart);
 
+
             if (board.get_turn() == libataxx::Side::Black) {
                 m_clock_white->stop_clock();
                 m_clock_black->start_clock();
@@ -398,8 +402,6 @@ MainWindow::MainWindow(const std::string &settings_path,
             m_material_label->setText(("Material: " + std::to_string(material)).c_str());
 
             m_pgn_text_field->append(static_cast<std::string>(move).c_str());
-
-            this->m_board_scene->on_new_move(move);
         },
         Qt::QueuedConnection);
 

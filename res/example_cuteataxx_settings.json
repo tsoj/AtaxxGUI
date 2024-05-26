@@ -14,8 +14,8 @@
     "shuffle": true
   },
   "timecontrol": {
-    "time": 10000,
-    "inc": 100
+    "time": 60000,
+    "inc": 1000
   },
   "options": {
     "debug": "false",
