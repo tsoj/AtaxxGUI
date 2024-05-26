@@ -7,7 +7,7 @@
 
 ## Compile
 
-You need to install Git, CMake, a C++ compiler, Boost, and Qt6. 
+You need to install Git, CMake, a C++ compiler, Boost, and Qt6. TODO qt-charts
 
 On Ubuntu you can do that like this (there will be similar packages for most Linux distros):
 ```bash

@@ -15,6 +15,7 @@
 #include <QTextEdit>
 #include <QThread>
 #include <QTimeEdit>
+#include <QtCharts/QLineSeries>
 #include <map>
 #include <string_view>
 #include <thread>
@@ -22,6 +23,7 @@
 #include "boardview/boardview.hpp"
 #include "countdowntimer.hpp"
 // #include "gameworker.hpp"
+#include <QtCharts/QChartView>
 // #include "humanengine.hpp"
 
 class TournamentWorker : public QObject {
@@ -43,7 +45,7 @@ class TournamentWorker : public QObject {
     void new_game(const std::string& fen, const std::string& name1, const std::string& name2, int wtime, int btime);
     void game_finished(const libataxx::Result& result);
     void results_update(const Results& results);
-    void new_move(const libataxx::Move& move, int ms);
+    void new_move(const libataxx::Move& move, int ms, int64_t relative_score);
 
    private:
     std::string m_settings_path;
@@ -127,6 +129,9 @@ class MainWindow : public QMainWindow {
     QLabel* m_engine_name_black{nullptr};
     QLabel* m_engine_name_white{nullptr};
     QTableWidget* m_results_table{nullptr};
+
+    std::vector<double> m_scores;
+    QChartView* m_chart_view{nullptr};
 
     TournamentWorker* m_tournament_worker{nullptr};
     QThread m_worker_thread;

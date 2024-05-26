@@ -2,6 +2,7 @@
 #include <qcheckbox.h>
 #include <qcombobox.h>
 #include <qlabel.h>
+#include <qlineseries.h>
 #include <qmessagebox.h>
 #include <qnamespace.h>
 #include <qpushbutton.h>
@@ -22,8 +23,11 @@
 #include <QPushButton>
 #include <QRadioButton>
 #include <QSpinBox>
+#include <QSplineSeries>
 #include <QTextEdit>
 #include <QVBoxLayout>
+#include <QValueAxis>
+#include <QtCharts/QChart>
 #include <algorithm>
 #include <cassert>
 #include <exception>
@@ -87,9 +91,9 @@ void fill_table(QTableWidget *results_table, const Results &results) {
         results_table->setItem(row, 0, engineItem);
 
         // Score (string)
-        const int scoreScore = (100 * (score.draws + 2 * score.wins)) / (2 * score.played);
+        const int score_score = (100 * (score.draws + 2 * score.wins)) / std::max(2 * score.played, 1);
         auto *rankItem =
-            new QTableWidgetItem((std::to_string(scoreScore) + " %").c_str());  // Replace with the actual engine name
+            new QTableWidgetItem((std::to_string(score_score) + " %").c_str());  // Replace with the actual engine name
         results_table->setItem(row, 1, rankItem);
 
         // Wins (int)
@@ -153,6 +157,7 @@ MainWindow::MainWindow(const std::string &settings_path,
     m_engine_name_white = new QLabel(this);
 
     m_results_table = new QTableWidget(this);
+    m_chart_view = new QChartView(this);
 
     // TODO swap left and right for red and blue clock and balance
 
@@ -194,10 +199,14 @@ MainWindow::MainWindow(const std::string &settings_path,
         }
     });
 
+    // Create a chart view with the chart
+    m_chart_view->setRenderHint(QPainter::Antialiasing);
+    m_chart_view->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+
     left_layout->addWidget(m_piece_theme_selection);
     left_layout->addWidget(m_board_theme_selection);
     left_layout->addWidget(m_results_table);
-    left_layout->addStretch(1);
+    left_layout->addWidget(m_chart_view);
     main_layout->addLayout(left_layout);
 
     set_label_piece_pixmap(m_clock_piece_white, libataxx::Piece::White, m_clock_white->height());
@@ -208,7 +217,6 @@ MainWindow::MainWindow(const std::string &settings_path,
     m_turn_radio_white->setLayoutDirection(Qt::RightToLeft);
     m_turn_radio_white->setMaximumWidth(m_clock_black->height());
     m_turn_radio_black->setMaximumWidth(m_clock_black->height());
-
 
     clock_layout->addWidget(m_turn_radio_black);
     clock_layout->addWidget(m_clock_piece_black);
@@ -238,7 +246,6 @@ MainWindow::MainWindow(const std::string &settings_path,
     main_layout->addLayout(middle_layout);
 
     // Create right vertical layout for text field
-    // TODO add move list
     m_pgn_text_field->setReadOnly(true);
     right_layout->addWidget(m_pgn_text_field);
 
@@ -281,6 +288,7 @@ MainWindow::MainWindow(const std::string &settings_path,
             m_board_scene->set_board(libataxx::Position(fen));
             m_clock_white->set_time(QTime(0, 0).addMSecs(wtime));
             m_clock_black->set_time(QTime(0, 0).addMSecs(btime));
+            m_scores.clear();
         },
         Qt::QueuedConnection);
 
@@ -290,6 +298,9 @@ MainWindow::MainWindow(const std::string &settings_path,
         this,
         [&](const libataxx::Result &result) {
             m_board_scene->on_game_finished(result);
+
+            m_clock_white->stop_clock();
+            m_clock_black->stop_clock();
         },
         Qt::QueuedConnection);
 
@@ -306,13 +317,64 @@ MainWindow::MainWindow(const std::string &settings_path,
         m_tournament_worker,
         &TournamentWorker::new_move,
         this,
-        [&](const libataxx::Move &move, int ms) {
+        [&](const libataxx::Move &move, const int ms, int cp_score) {
             const auto board = m_board_scene->board();
+
+            size_t black_mod_rest = m_scores.size() % 2;
             if (board.get_turn() == libataxx::Side::Black) {
                 m_clock_black->set_time(QTime(0, 0).addMSecs(ms));
             } else {
                 m_clock_white->set_time(QTime(0, 0).addMSecs(ms));
+                cp_score = -cp_score;
+                black_mod_rest = 1 - black_mod_rest;
             }
+            m_scores.push_back(std::clamp(static_cast<double>(cp_score) / 100.0, -9.0, 9.0));
+
+            auto *m_chart = new QChart();
+            m_chart->legend()->hide();
+
+            auto *m_black_score_series = new QLineSeries;
+            auto *m_white_score_series = new QLineSeries;
+            m_black_score_series->setPen(QPen(Qt::red, 2.5));
+            m_white_score_series->setPen(QPen(Qt::blue, 2.5));
+            double max_score = 3.0;
+            for (size_t i = 0; i < m_scores.size(); ++i) {
+                auto *series = (i % 2) == black_mod_rest ? m_black_score_series : m_white_score_series;
+                series->append(i, m_scores.at(i));
+                max_score = std::max(std::abs(m_scores.at(i)), max_score);
+            }
+            m_chart->addSeries(m_black_score_series);
+            m_chart->addSeries(m_white_score_series);
+
+            auto axis_y = new QValueAxis();
+            axis_y->setTitleText("Engine evaluation");
+            axis_y->setLabelFormat("%d");
+            axis_y->setTickCount(7);  // Assuming symmetric range
+            max_score += 0.1;
+            axis_y->setRange(-max_score, max_score);
+            m_chart->addAxis(axis_y, Qt::AlignLeft);
+            m_black_score_series->attachAxis(axis_y);
+            m_white_score_series->attachAxis(axis_y);
+
+            auto axis_x = new QValueAxis();
+            axis_x->setLabelFormat("%d");
+            axis_x->setTickCount(3);  // Assuming symmetric range
+            axis_x->setRange(0, m_scores.size());
+            m_chart->addAxis(axis_x, Qt::AlignBottom);
+            m_black_score_series->attachAxis(axis_x);
+            m_white_score_series->attachAxis(axis_x);
+
+            // auto axis_x = new QValueAxis();
+            // axis_x->setTitleText("move");
+            // axis_x->setRange(0, m_score_series->count());
+            // axis_x->setLabelFormat("%d");
+            // axis_x->setTickCount(m_score_series->count() + 1);
+            // m_chart->addAxis(axis_x, Qt::AlignBottom);
+            // m_score_series->attachAxis(axis_x);
+
+            // m_chart->createDefaultAxes();
+
+            m_chart_view->setChart(m_chart);
 
             if (board.get_turn() == libataxx::Side::Black) {
                 m_clock_white->stop_clock();
@@ -355,6 +417,8 @@ void TournamentWorker::start() {
 
     // assert(false);
 
+    std::optional<int64_t> current_cp_score = std::nullopt;
+
     const auto callbacks = Callbacks{
         .on_engine_start =
             [](const std::string &) {
@@ -373,15 +437,35 @@ void TournamentWorker::start() {
                 emit results_update(results);
             },
         .on_info_send =
-            [](const std::string &) {
+            [](const std::string &s) {
+                std::cout << s << std::endl;
             },
         .on_info_recv =
-            [](const std::string &) {
+            [&](const std::string &s) {
+                std::cout << s << std::endl;
+                std::string text = "your line of white space separated words with cp in it";
+                std::istringstream iss(s);
+                std::string word;
+
+                // Read words into vector
+                while (iss >> word) {
+                    if (word == "score") {
+                        try {
+                            iss >> word;
+                            current_cp_score = std::stoll(word);
+                            return;
+                        } catch (...) {
+                            iss >> word;
+                            current_cp_score = std::stoll(word);
+                            return;
+                        }
+                    }
+                }
             },
         .on_move =
             [&](const libataxx::Move &move, const int ms) {
-                emit new_move(move, ms);
-                // TODO wait a little to make the game watchable by a human
+                emit new_move(move, ms, current_cp_score.value());  //.value_or(0)); // TODO should be value_or
+                current_cp_score = std::nullopt;
                 std::this_thread::sleep_for(std::chrono::milliseconds(m_milliseconds_between_moves));
             },
     };

@@ -48,7 +48,7 @@ else()
     find_package(Boost REQUIRED COMPONENTS filesystem)
 endif()
 find_package(Threads REQUIRED)
-find_package(Qt6 REQUIRED COMPONENTS Widgets)
+find_package(Qt6 REQUIRED COMPONENTS Widgets Charts)
 
 if(NOT (Boost_FOUND AND Threads_FOUND AND Qt6Core_FOUND))
     message(FATAL_ERROR "Can't build AtaxxGUI: Boost, Threads, and Qt6 required")
@@ -102,6 +102,7 @@ target_link_libraries(
     PRIVATE
     Threads::Threads
     Qt6::Widgets
+    Qt6::Charts
     ataxx_static
     nlohmann_json::nlohmann_json
     ${Boost_LIBRARIES}
