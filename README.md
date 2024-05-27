@@ -1,6 +1,6 @@
 <div align="center">
 <p><h1>AtaxxGUI</h1>
-<i><h4>A graphical user interface for playing Ataxx between engines and humans</h4></i>
+<i><h4>A GUI for showing Ataxx tournaments between engines</h4></i>
 <img src="./screenshot.png" width="640px">
 </h1>
 </div>
