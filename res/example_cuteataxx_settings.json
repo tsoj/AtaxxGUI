@@ -14,12 +14,12 @@
     "shuffle": true
   },
   "timecontrol": {
-    "time": 60000,
-    "inc": 1000
+    "time": 10000,
+    "inc": 100
   },
   "options": {
     "debug": "false",
-    "threads": "8",
+    "threads": "1",
     "hash": "256",
     "ownbook": "false"
   },

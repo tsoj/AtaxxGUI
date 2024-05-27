@@ -89,6 +89,7 @@ void fill_table(QTableWidget *results_table, const Results &results) {
         const int rank = (100 * (score.draws + 2 * score.wins)) / std::max(2 * score.played, 1);
         scores.emplace_back(engine, score, rank);
     }
+
     std::sort(scores.begin(), scores.end(), [](auto a, auto b) {
         return std::get<2>(a) > std::get<2>(b);
     });
@@ -125,8 +126,6 @@ void fill_table(QTableWidget *results_table, const Results &results) {
         crashesItem->setData(Qt::EditRole, QVariant(score.crashes));
         results_table->setItem(row, 5, crashesItem);
     }
-
-    results_table->sortByColumn(1, Qt::SortOrder::DescendingOrder);
 
     results_table->setVisible(false);
     results_table->resizeColumnsToContents();
@@ -331,7 +330,6 @@ MainWindow::MainWindow(const std::string &settings_path,
         &TournamentWorker::new_move,
         this,
         [&](const libataxx::Move &move, const int ms, int cp_score) {
-            
             this->m_board_scene->on_new_move(move);
 
             const auto board = m_board_scene->board();
@@ -380,7 +378,6 @@ MainWindow::MainWindow(const std::string &settings_path,
             m_black_score_series->attachAxis(axis_x);
             m_white_score_series->attachAxis(axis_x);
             m_chart_view->setChart(m_chart);
-
 
             if (board.get_turn() == libataxx::Side::Black) {
                 m_clock_white->stop_clock();
@@ -438,12 +435,11 @@ void TournamentWorker::start() {
             },
         .on_info_send =
             [](const std::string &s) {
-                std::cout << s << std::endl;
+                std::cout << "--> " << s << std::endl;
             },
         .on_info_recv =
             [&](const std::string &s) {
-                std::cout << s << std::endl;
-                std::string text = "your line of white space separated words with cp in it";
+                std::cout << "<-- " << s << std::endl;
                 std::istringstream iss(s);
                 std::string word;
 
@@ -452,7 +448,12 @@ void TournamentWorker::start() {
                     if (word == "score") {
                         try {
                             iss >> word;
-                            current_cp_score = std::stoll(word);
+                            int64_t multiplier = 1;
+                            if (word == "mate") {
+                                iss >> word;
+                                multiplier = 1000000;
+                            }
+                            current_cp_score = std::stoll(word) * multiplier;
                             return;
                         } catch (...) {
                             iss >> word;
