@@ -421,7 +421,7 @@ void TournamentWorker::start() {
             [](const std::string &) {
             },
         .on_game_started =
-            [&](const int, const std::string &fen, const std::string &name1, const std::string &name2) {
+            [&](const std::string &fen, const std::string &name1, const std::string &name2) {
                 emit new_game(fen, name1, name2, settings.tc.wtime, settings.tc.btime);
             },
         .on_game_finished =
