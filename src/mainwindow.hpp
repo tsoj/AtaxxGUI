@@ -47,7 +47,7 @@ class TournamentWorker : public QObject {
     void new_game(const std::string& fen, const std::string& name1, const std::string& name2, int wtime, int btime);
     void game_finished(const libataxx::Result& result);
     void results_update(const Results& results);
-    void new_move(const libataxx::Move& move, int ms, int64_t relative_score);
+    void new_move(const libataxx::Move& move, const SearchSettings& tc, int64_t relative_score);
 
    private:
     std::string m_settings_path;

@@ -52,21 +52,6 @@ void set_label_piece_pixmap(QLabel *label, libataxx::Piece piece, int size) {
     label->show();
 }
 
-auto get_recv_send_callbacks(const std::string &engine_name) {
-    const auto write_line = [engine_name](const std::string &line, const std::string &prefix) {
-        std::ofstream file(QCoreApplication::applicationDirPath().toStdString() + "/" + engine_name + ".log",
-                           std::ios::app);
-        file << prefix << line << std::endl;
-        file.close();
-    };
-    return std::pair{[write_line](const std::string &msg) {
-                         write_line(msg, "--> ");
-                     },
-                     [write_line](const std::string &msg) {
-                         write_line(msg, "<-- ");
-                     }};
-}
-
 void fill_table(QTableWidget *results_table, const Results &results) {
     results_table->clear();
     results_table->clearContents();
@@ -329,16 +314,16 @@ MainWindow::MainWindow(const std::string &settings_path,
         m_tournament_worker,
         &TournamentWorker::new_move,
         this,
-        [&](const libataxx::Move &move, const int ms, int cp_score) {
+        [&](const libataxx::Move &move, const SearchSettings &tc, int cp_score) {
             this->m_board_scene->on_new_move(move);
 
-            const auto board = m_board_scene->board();
+            const auto board_after_move = m_board_scene->board();
+
+            m_clock_black->set_time(QTime(0, 0).addMSecs(tc.btime));
+            m_clock_white->set_time(QTime(0, 0).addMSecs(tc.wtime));
 
             size_t black_mod_rest = m_scores.size() % 2;
-            if (board.get_turn() == libataxx::Side::White) {
-                m_clock_black->set_time(QTime(0, 0).addMSecs(ms));
-            } else {
-                m_clock_white->set_time(QTime(0, 0).addMSecs(ms));
+            if (board_after_move.get_turn() == libataxx::Side::Black) {
                 cp_score = -cp_score;
                 black_mod_rest = 1 - black_mod_rest;
             }
@@ -379,7 +364,7 @@ MainWindow::MainWindow(const std::string &settings_path,
             m_white_score_series->attachAxis(axis_x);
             m_chart_view->setChart(m_chart);
 
-            if (board.get_turn() == libataxx::Side::Black) {
+            if (board_after_move.get_turn() == libataxx::Side::Black) {
                 m_clock_white->stop_clock();
                 m_clock_black->start_clock();
 
@@ -394,7 +379,7 @@ MainWindow::MainWindow(const std::string &settings_path,
                 m_turn_radio_white->setChecked(true);
             }
 
-            const int material = board.get_score();
+            const int material = board_after_move.get_score();
             m_material_balance_slider->setSliderPosition(-material);
             m_material_label->setText(("Material: " + std::to_string(material)).c_str());
 
@@ -421,11 +406,11 @@ void TournamentWorker::start() {
             [](const std::string &) {
             },
         .on_game_started =
-            [&](const std::string &fen, const std::string &name1, const std::string &name2) {
+            [&](const size_t /*id*/, const std::string &fen, const std::string &name1, const std::string &name2) {
                 emit new_game(fen, name1, name2, settings.tc.wtime, settings.tc.btime);
             },
         .on_game_finished =
-            [&](const libataxx::Result result, const std::string &, const std::string &) {
+            [&](const size_t /*id*/, const libataxx::Result result, const std::string &, const std::string &) {
                 emit game_finished(result);
                 std::this_thread::sleep_for(std::chrono::seconds(m_seconds_between_games));
             },
@@ -464,8 +449,8 @@ void TournamentWorker::start() {
                 }
             },
         .on_move =
-            [&](const libataxx::Move &move, const int ms) {
-                emit new_move(move, ms, current_cp_score.value_or(0));
+            [&](const libataxx::Move &move, const int /* move_time_ms */, const SearchSettings &tc) {
+                emit new_move(move, tc, current_cp_score.value_or(0));
                 current_cp_score = std::nullopt;
                 std::this_thread::sleep_for(std::chrono::milliseconds(m_milliseconds_between_moves));
             },
